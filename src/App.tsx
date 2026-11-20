@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CalendarDays, Home, Camera as Instagram, MapPin, Sparkles, UserRound, BookOpen, Menu } from 'lucide-react'
 import { HomePage, Catalog, Procedure, Portfolio, Courses, CourseDetail, Legal } from './public'
 import { Action, Brand } from './ui'
@@ -20,9 +20,11 @@ const tabs = [
 ] as const
 export function App() {
   const {pathname} = useLocation()
-  const {session,admin,settings} = useStudio()
+  const {session,admin,settings,authEvent} = useStudio()
+  const navigate=useNavigate()
   const management=pathname.startsWith('/admin')
   useEffect(()=>{window.scrollTo(0,0)},[pathname])
+  useEffect(()=>{if(authEvent==='PASSWORD_RECOVERY')navigate('/perfil',{replace:true})},[authEvent,navigate])
   useEffect(()=>{
     const referral=new URLSearchParams(location.hash.split('?')[1]).get('indicacao')
     if(referral&&/^[a-f0-9]{32}$/.test(referral))localStorage.setItem('studio-referral',referral)

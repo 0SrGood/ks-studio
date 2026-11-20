@@ -6,6 +6,7 @@ import { BookingList } from './booking'
 import { db,database,rpc,useStudio } from './studio'
 import { dayLabel,errorText,localDay,media, time, type Booking } from './data'
 import { PushToggle, releasePush } from './push'
+import { Captcha, captchaSiteKey } from './captcha'
 
 const redirect=()=>location.origin+location.pathname
 type AuthMode='login'|'signup'|'reset'|'recover'
@@ -13,13 +14,16 @@ type Message={text:string;success:boolean}
 const initial:Message={text:'',success:false}
 
 export function SignIn({forceLogin=false}:{forceLogin?:boolean}) {
-  const {authEvent,session}=useStudio()
+  const {authEvent,session,clearAuthEvent}=useStudio()
   const [standaloneMode,setMode]=useState<AuthMode>('login')
   const [recovered,setRecovered]=useState(false)
   const mode=authEvent==='PASSWORD_RECOVERY'&&!recovered?'recover':standaloneMode
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState(initial)
-  useEffect(()=>{setMessage(initial)},[mode])
+  const [captchaToken,setCaptchaToken]=useState('')
+  const [captchaKey,setCaptchaKey]=useState(0)
+  const needsCaptcha=Boolean(captchaSiteKey)&&mode!=='recover'
+  useEffect(()=>{setMessage(initial);setCaptchaToken('')},[mode])
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();setBusy(true);setMessage(initial)
     const data=new FormData(event.currentTarget)
@@ -27,18 +31,18 @@ export function SignIn({forceLogin=false}:{forceLogin?:boolean}) {
     try{
       const auth=database().auth
       if(mode==='reset'){
-        const {error}=await auth.resetPasswordForEmail(email,{redirectTo:redirect()});if(error)throw error
+        const {error}=await auth.resetPasswordForEmail(email,{redirectTo:redirect(),captchaToken:captchaToken||undefined});if(error)throw error
         setMessage({text:'Se houver uma conta com esse e-mail, você receberá o link de recuperação.',success:true})
       }else if(mode==='recover'){
         const {error}=await auth.updateUser({password});if(error)throw error
-        setMessage({text:'Senha atualizada.',success:true});setRecovered(true)
+        setMessage({text:'Senha atualizada.',success:true});setRecovered(true);clearAuthEvent()
       }else if(mode==='signup'){
-        const result=await auth.signUp({email,password,options:{emailRedirectTo:redirect()}});if(result.error)throw result.error
+        const result=await auth.signUp({email,password,options:{emailRedirectTo:redirect(),captchaToken:captchaToken||undefined}});if(result.error)throw result.error
         if(!result.data.session)setMessage({text:'Verifique sua caixa de entrada para confirmar o e-mail.',success:true})
       }else{
-        const {error}=await auth.signInWithPassword({email,password});if(error)throw new Error('Confira o e-mail e a senha ou solicite a recuperação.')
+        const {error}=await auth.signInWithPassword({email,password,options:{captchaToken:captchaToken||undefined}});if(error)throw new Error('Confira o e-mail e a senha ou solicite a recuperação.')
       }
-    }catch(error){setMessage({text:errorText(error),success:false})}finally{setBusy(false)}
+    }catch(error){setMessage({text:errorText(error),success:false})}finally{setBusy(false);setCaptchaToken('');setCaptchaKey(n=>n+1)}
   }
   const labels={login:'Entrar',signup:'Criar conta',reset:'Enviar link de recuperação',recover:'Salvar nova senha'}
   return <section className="signin"><Brand full/><h2>{mode==='signup'?'Crie sua conta':mode==='reset'?'Recuperar senha':mode==='recover'?'Escolha sua nova senha':'Acesse sua conta'}</h2>
@@ -47,7 +51,8 @@ export function SignIn({forceLogin=false}:{forceLogin?:boolean}) {
     <form className="stack" onSubmit={submit}>
       {mode!=='recover'&&<label className="field">E-mail<input autoComplete="email" type="email" name="email" required maxLength={254}/></label>}
       {mode!=='reset'&&<label className="field">Senha<input minLength={mode==='login'?1:8} maxLength={128} autoComplete={mode==='login'?'current-password':'new-password'} type="password" name="password" required/></label>}
-      <Action disabled={busy} type="submit">{busy?'Aguarde…':labels[mode]}</Action>
+      {needsCaptcha&&<Captcha key={mode+'-'+captchaKey} onToken={setCaptchaToken}/>}
+      <Action disabled={busy||(needsCaptcha&&!captchaToken)} type="submit">{busy?'Aguarde…':labels[mode]}</Action>
     </form>
     <div className="inline-actions">{mode==='login'?<>
       {!forceLogin&&!session?.user.is_anonymous&&<Action kind="quiet" onClick={()=>setMode('signup')}>Criar conta</Action>}

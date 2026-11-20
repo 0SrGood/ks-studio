@@ -29,8 +29,8 @@ export async function invoke<T>(name:string,body:Record<string,unknown>|FormData
 const Studio = createContext<{
   session:Session|null; profile:Profile|null; admin:boolean; loading:boolean; settings:StudioSettings;
   services:Service[]; courses:Course[]; works:Work[]; news:Publication[]; refresh:()=>Promise<void>;
-  publicError:string; authEvent:string;
-}>({session:null,profile:null,admin:false,loading:true,settings:defaults,services:[],courses:[],works:localWorks,news:[],refresh:async()=>{},publicError:'',authEvent:''})
+  publicError:string; authEvent:string; clearAuthEvent:()=>void;
+}>({session:null,profile:null,admin:false,loading:true,settings:defaults,services:[],courses:[],works:localWorks,news:[],refresh:async()=>{},publicError:'',authEvent:'',clearAuthEvent:()=>{}})
 
 export const useStudio = () => useContext(Studio)
 export function StudioProvider({children}:{children:ReactNode}) {
@@ -73,8 +73,10 @@ export function StudioProvider({children}:{children:ReactNode}) {
       db.from('profiles').select().eq('id',userId).maybeSingle(),
       db.rpc('is_admin'),
     ])
+    const current=await db.auth.getSession()
+    if(current.data.session?.user.id!==userId)return
     setProfile(data.data)
-    setAdmin(role.data === true)
+    setAdmin(role.data === true && !current.data.session.user.is_anonymous)
   }
   async function refresh() { await Promise.all([refreshPublic(),refreshProfile()]) }
   useEffect(() => {
@@ -94,5 +96,5 @@ export function StudioProvider({children}:{children:ReactNode}) {
     setLoading(true)
     void refreshProfile().finally(()=>setLoading(false))
   },[userId])
-  return <Studio.Provider value={{session,profile,admin,loading,settings,services,courses,works,news,refresh,publicError,authEvent}}>{children}</Studio.Provider>
+  return <Studio.Provider value={{session,profile,admin,loading,settings,services,courses,works,news,refresh,publicError,authEvent,clearAuthEvent:()=>setAuthEvent('')}}>{children}</Studio.Provider>
 }

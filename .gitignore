@@ -11,4 +11,5 @@ public/media/gallery-*.webp
 /worker/
 /OPERACAO.md
 /tests/backend.test.mjs
+/scripts/checkout-local.mjs
 

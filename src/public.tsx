@@ -124,6 +124,7 @@ function Interest({course,cohort}:{course?:string;cohort?:string}) {
     try {await invoke('interest',{name:fields.get('name'),phone:fields.get('phone'),email:fields.get('email'),course:course||null,cohort:cohort||null,consent:fields.get('consent')==='on'});setSent(true);setStatus('Interesse registrado. O Studio poderá avisar você sobre a turma.')}
     catch(error){setStatus(errorText(error))}finally{setBusy(false)}
   }
+  if(!db)return <><p>O formulário de interesse está em configuração. Acompanhe os avisos do Studio no Instagram.</p><a className="text-link" href={coursePost} target="_blank" rel="noreferrer">Ver cursos no Instagram</a></>
   return <form className="stack" onSubmit={submit}>
     <label className="field">Nome completo<input required maxLength={120} name="name" defaultValue={profile?.name}/></label>
     <label className="field">WhatsApp<input required type="tel" name="phone" maxLength={24} defaultValue={profile?.phone}/></label>

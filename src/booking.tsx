@@ -5,12 +5,13 @@ import { db, database, invoke, rpc, useStudio } from './studio'
 import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
 import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
 import { requestInstallation } from './installation'
+import { Captcha, captchaSiteKey } from './captcha'
 
-export async function ensureVisitor() {
+export async function ensureVisitor(captchaToken?:string) {
   const auth=database().auth
   const current=await auth.getSession()
   if(current.data.session) return current.data.session
-  const {data,error}=await auth.signInAnonymously()
+  const {data,error}=await auth.signInAnonymously({options:{captchaToken}})
   if(error||!data.session) throw new Error('Não foi possível iniciar sua sessão de agendamento. Tente novamente.')
   return data.session
 }
@@ -53,6 +54,8 @@ export default function BookingPage() {
   const [feedback,setFeedback]=useState('')
   const [confirmed,setConfirmed]=useState<Booking|null>(null)
   const [formDetails,setFormDetails]=useState<{name:string;phone:string;method:string}|null>(null)
+  const [captchaToken,setCaptchaToken]=useState('')
+  const needsCaptcha=Boolean(captchaSiteKey&&!session)
   const bookingId=params.get('pix')
   const reschedule=params.get('reagendar')
   const requestId=useRef(crypto.randomUUID())
@@ -71,7 +74,7 @@ export default function BookingPage() {
     if(holding.current)return
     holding.current=true;setBusy(true);setError('')
     try{
-      await ensureVisitor()
+      await ensureVisitor(captchaToken||undefined)
       if(reschedule){
         const result=await rpc<Booking>('change_booking',{p_booking:reschedule,p_action:'reschedule',p_start:slot})
         setConfirmed(result);return
@@ -95,7 +98,7 @@ export default function BookingPage() {
     event.preventDefault();setBusy(true);setError('')
     const fields=new FormData(event.currentTarget)
     try {
-      await ensureVisitor()
+      await ensureVisitor(captchaToken||undefined)
       await rpc('save_profile',{p_name:fields.get('name'),p_phone:fields.get('phone'),p_avatar:null,p_alerts:null,p_marketing:null})
       await rpc('join_waitlist',{p_service:selected,p_day:day,p_period:fields.get('period')})
       setWaitlist(false);setFeedback('Você entrou na lista de espera. Se surgir um horário, o aviso ficará na sua área de agendamentos.')
@@ -132,7 +135,8 @@ export default function BookingPage() {
           {!service.onsite&&(!service.pix||!availablePix)&&<p>O pagamento ainda está indisponível neste procedimento.</p>}
         </fieldset>
         <label className="check"><input type="checkbox" required/> Li o resumo e aceito a política de cancelamento.</label></>}
-        <Action type="submit" disabled={busy||!slot||(!reschedule&&!service.onsite&&(!service.pix||!availablePix))}>{busy?'Confirmando…':reschedule?'Confirmar novo horário':'Continuar com agendamento'}</Action>
+        {needsCaptcha&&slot&&!waitlist&&<Captcha onToken={setCaptchaToken}/>}
+        <Action type="submit" disabled={busy||!slot||(needsCaptcha&&!captchaToken)||(!reschedule&&!service.onsite&&(!service.pix||!availablePix))}>{busy?'Confirmando…':reschedule?'Confirmar novo horário':'Continuar com agendamento'}</Action>
       </form>
       <Notice message={warning||waitlist?'':error}/>
     </section></div>}
@@ -140,7 +144,8 @@ export default function BookingPage() {
     {waitlist&&<Dialog title="Lista de espera" onClose={()=>setWaitlist(false)}><p>{dayLabel(day)}</p>
       <form className="stack" onSubmit={addWaitlist}><label className="field">Nome completo<input name="name" defaultValue={profile?.name} required maxLength={120}/></label><label className="field">WhatsApp<input name="phone" type="tel" defaultValue={profile?.phone} required maxLength={24}/></label>
         <label className="field">Período<select name="period"><option value="any">Qualquer período</option><option value="morning">Manhã</option><option value="afternoon">Tarde</option><option value="evening">Noite</option></select></label>
-        <Action type="submit" disabled={busy}>Entrar na lista de espera</Action><Notice message={error}/>
+        {needsCaptcha&&<Captcha onToken={setCaptchaToken}/>}
+        <Action type="submit" disabled={busy||(needsCaptcha&&!captchaToken)}>Entrar na lista de espera</Action><Notice message={error}/>
       </form></Dialog>}
     {warning&&<PixWarning disabled={busy} message={error} onClose={()=>{if(!busy)setWarning(false)}} onContinue={()=>{if(formDetails)void reserve(formDetails)}}/>}
     {session&&<p className="booking-footer"><TextLink to="/perfil">Ver meus agendamentos</TextLink></p>}
