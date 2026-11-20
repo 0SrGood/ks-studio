@@ -9,7 +9,7 @@ export function Brand({full=false}:{full?:boolean}) {
 }
 
 export function NextArtwork({className=''}:{className?:string}) {
-  return <img className={'next-art '+className} src={media('button-next.png')} alt="" width="42" height="42"/>
+  return <img className={'next-art '+className} src={media('button-chevron.png')} alt="" width="42" height="42"/>
 }
 
 export function DirectionButton({label,previous=false,...props}:ButtonHTMLAttributes<HTMLButtonElement> & {label:string;previous?:boolean}) {
