@@ -8,6 +8,7 @@ import { serviceArtwork } from './catalog'
 import './booking-steps.css'
 import {QuickService} from './quick-service'
 import {AppointmentCountdown} from './appointment-countdown'
+import {readContact,saveContact,readDeviceBookings,saveDeviceBookings} from './device-profile'
 import { requestInstallation } from './installation'
 import { Captcha, captchaSiteKey } from './captcha'
 
@@ -82,7 +83,10 @@ export default function BookingPage() {
         setConfirmed(result);return
       }
       await rpc('save_profile',{p_name:details.name,p_phone:details.phone,p_avatar:null,p_alerts:null,p_marketing:null,p_referral:localStorage.getItem('studio-referral')})
+      saveContact({name:details.name,phone:details.phone})
       const result=await rpc<Booking>('reserve',{p_service:selected,p_start:slot,p_method:details.method,p_request:requestId.current})
+      const owner=(await database().auth.getSession()).data.session?.user.id
+      if(owner)saveDeviceBookings(owner,[result,...readDeviceBookings<Booking>(owner).filter(item=>item.id!==result.id)])
       if(details.method==='pix') {setParams({pix:result.id});setWarning(false)}
       else {setConfirmed(result);if(installInvite())setInvite(true)}
     }catch(error){setError(errorText(error))}
@@ -145,8 +149,8 @@ export default function BookingPage() {
       <p>{settings.address}</p><p>Prazo para cancelar: {settings.cancellation_hours} h. Para reagendar: {settings.reschedule_hours} h antes do atendimento.</p>
       {service.payment_conditions&&<p>{service.payment_conditions}</p>}</div>
       <form className="stack" onSubmit={advance} key={selected}>
-        {!reschedule&&<><label className="field">Nome completo<input key={profile?.name||''} autoComplete="name" name="name" defaultValue={profile?.name} maxLength={120} required/></label>
-        <label className="field">WhatsApp com DDD<input key={profile?.phone||''} autoComplete="tel" type="tel" name="phone" defaultValue={profile?.phone||sessionStorage.getItem('studio-booking-phone')||''} required maxLength={24}/></label>
+        {!reschedule&&<><label className="field">Nome completo<input key={profile?.name||''} autoComplete="name" name="name" defaultValue={profile?.name||readContact()?.name} maxLength={120} required/></label>
+        <label className="field">WhatsApp com DDD<input key={profile?.phone||''} autoComplete="tel" type="tel" name="phone" defaultValue={profile?.phone||readContact()?.phone||sessionStorage.getItem('studio-booking-phone')||''} required maxLength={24}/></label>
         <fieldset><legend>Forma de pagamento</legend>
           {service.onsite&&<label className="check"><input name="method" type="radio" value="onsite" defaultChecked required/> Pagar no local</label>}
           {service.pix&&availablePix&&<label className="check"><input name="method" type="radio" value="pix" defaultChecked={!service.onsite} required/> Pagar com Pix</label>}
@@ -313,7 +317,16 @@ export function BookingList({onlyPayments=false}:{onlyPayments?:boolean}) {
   const [cancel,setCancel]=useState<string|null>(null)
   const [busy,setBusy]=useState(false)
   const [loading,setLoading]=useState(Boolean(session))
-  function load(){if(db&&session)void db.from('bookings').select().eq('customer_id',session.user.id).order('starts_at',{ascending:false}).then(({data,error})=>{setItems(data||[]);setError(error?.message||'');setLoading(false)})}
+  function load(){
+    if(!db||!session)return
+    const owner=session.user.id
+    setItems(readDeviceBookings<Booking>(owner))
+    void db.from('bookings').select().eq('customer_id',owner).order('starts_at',{ascending:false}).then(({data,error})=>{
+      if(data){setItems(data);saveDeviceBookings(owner,data)}
+      setError(error?'Não foi possível atualizar o histórico. Exibindo a cópia deste aparelho.':'')
+      setLoading(false)
+    })
+  }
   useEffect(load,[session?.user.id])
   if(!session)return <Empty title="Seus agendamentos"><p>Abra esta página no navegador onde você agendou ou entre para consultar sua conta.</p><TextLink to="/perfil">Meu perfil</TextLink></Empty>
   const now=Date.now()

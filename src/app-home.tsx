@@ -5,6 +5,8 @@ import { appointmentStatus, dayLabel, media, time, type Booking } from './data'
 import { db,useStudio } from './studio'
 import { Action, NextArtwork } from './ui'
 import { CustomerEntry } from './customer-entry'
+import {readContact} from './device-profile'
+import {Navigate} from 'react-router-dom'
 
 const shortcuts=[
   [CalendarDays,'Meus agendamentos','/perfil?secao=agenda'],
@@ -30,6 +32,7 @@ export function AppHome(){
   },[customerId])
   const item=upcoming?.owner===customerId?upcoming?.booking:null
   const firstName=profile?.name.trim().split(/\s+/)[0]
+  if(!admin&&readContact())return <Navigate to="/agendar" replace/>
   if(!admin)return <CustomerEntry welcome/>
   return <div className="wrap app-home">
     <header className="app-greeting"><h1>{firstName?'Olá, '+firstName:'Início'}</h1></header>

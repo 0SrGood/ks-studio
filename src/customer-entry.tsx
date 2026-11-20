@@ -7,6 +7,7 @@ import {Action,Notice} from './ui'
 import {Captcha,captchaSiteKey} from './captcha'
 import {ensureVisitor} from './visitor'
 import './customer-entry.css'
+import {readContact,saveContact} from './device-profile'
 
 export function CustomerEntry({welcome=false}:{welcome?:boolean}){
   const {session,profile,refresh}=useStudio()
@@ -19,12 +20,15 @@ export function CustomerEntry({welcome=false}:{welcome?:boolean}){
   const known=Boolean(session&&profile?.name&&profile.phone)
   const needsCaptcha=Boolean(captchaSiteKey&&step==='new'&&!session)
   const first=profile?.name.trim().split(/\s+/)[0]
+  const saved=readContact()
   function back(){setError('');setStep('choose');setCaptcha('')}
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setError('')
     const values=new FormData(event.currentTarget)
     try{
       if(step==='new'){
+        saveContact({name:String(values.get('name')).trim(),phone:String(values.get('phone')).trim()})
+        if(!db){navigate('/agendar');return}
         await ensureVisitor(captcha||undefined)
         await rpc('save_profile',{p_name:values.get('name'),p_phone:values.get('phone'),p_avatar:null,p_alerts:null,p_marketing:null,p_referral:localStorage.getItem('studio-referral')})
         await rpc('save_customer_details',{p_instagram:values.get('instagram')||null,p_birthday:values.get('birthday')||null})
@@ -49,7 +53,7 @@ export function CustomerEntry({welcome=false}:{welcome?:boolean}){
         <Action to="/agendar"><CalendarDays size={18}/> Agendar atendimento</Action>
         <Action to="/perfil?secao=agenda" kind="outline"><History size={18}/> Meus agendamentos</Action>
       </div>:step==='choose'?<div className="entry-actions">
-        <Action onClick={()=>{if(known)navigate('/');else setStep('phone')}}><UserRound size={18}/> Já sou cliente</Action>
+        <Action onClick={()=>{if(known||saved)navigate('/agendar');else setStep('phone')}}><UserRound size={18}/> Já sou cliente</Action>
         <Action kind="outline" onClick={()=>setStep('new')}><UserRoundPlus size={18}/> Primeiro atendimento</Action>
       </div>:<form className="stack" onSubmit={submit}>
         {step==='new'?<>
