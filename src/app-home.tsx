@@ -4,6 +4,7 @@ import { ArrowRight, Bell, BookOpen, CalendarDays, Clock3, ReceiptText, Sparkles
 import { appointmentStatus, dayLabel, media, time, type Booking } from './data'
 import { db,useStudio } from './studio'
 import { Action, NextArtwork } from './ui'
+import { CustomerEntry } from './customer-entry'
 
 const shortcuts=[
   [CalendarDays,'Meus agendamentos','/perfil?secao=agenda'],
@@ -29,6 +30,7 @@ export function AppHome(){
   },[customerId])
   const item=upcoming?.owner===customerId?upcoming?.booking:null
   const firstName=profile?.name.trim().split(/\s+/)[0]
+  if(!admin)return <CustomerEntry welcome/>
   return <div className="wrap app-home">
     <header className="app-greeting"><h1>{firstName?'Olá, '+firstName:'Início'}</h1></header>
     <section className="app-booking" aria-labelledby="app-booking-title">
@@ -50,4 +52,3 @@ export function AppHome(){
     </section>
   </div>
 }
-

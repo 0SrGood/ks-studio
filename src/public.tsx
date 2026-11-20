@@ -6,6 +6,7 @@ import { db, invoke, rpc, useStudio } from './studio'
 import { Action, Dialog, Empty, Intro, NextArtwork, Notice, TextLink } from './ui'
 import { serviceArtwork } from './catalog'
 import './catalog.css'
+import {QuickService} from './quick-service'
 
 export function HomePage() {
   const {settings,services,works,news,publicError}=useStudio()
@@ -42,7 +43,7 @@ function ServiceCard({service,external=false}:{service:Service;external?:boolean
   const path='/procedimentos/'+service.id
   const content=<><div className="catalog-image"><img className="catalog-photo" src={serviceArtwork(service)} alt="" width="720" height="540" loading="lazy" decoding="async"/><NextArtwork className="catalog-open"/></div>
     <div className="catalog-card-label"><span className="catalog-category">{service.category}</span><h3>{service.name}</h3>{isBookable(service)&&<small>{currency(service.price_cents)} · {service.duration} min</small>}</div></>
-  return <article className="catalog-card">{external?<a className="catalog-card-link" href={appHref(path)}>{content}</a>:<Link className="catalog-card-link" to={path} aria-label={service.name}>{content}</Link>}</article>
+  return <article className="catalog-card">{external?<a className="catalog-card-link" href={appHref(path)}>{content}</a>:<Link className="catalog-card-link" to={path} aria-label={service.name}>{content}</Link>}{!external&&<QuickService service={service}/>}</article>
 }
 function ServiceInfo({service}:{service:Service}){
   return <div className="metadata">{service.price_cents!==null&&<strong>{currency(service.price_cents)}</strong>}{service.duration!==null&&<span><Clock3 size={15}/>{service.duration} min</span>}
@@ -52,7 +53,7 @@ export function Catalog() {
   const {services,publicError}=useStudio()
   const [filter,setFilter]=useState('')
   const categories=[...new Set(services.map(service=>service.category))]
-  return <div className="wrap page catalog-page"><h1>Procedimentos</h1>
+  return <div className="wrap page catalog-page"><header className="section-title"><h1>Procedimentos</h1><QuickService/></header>
     {categories.length>0&&<div className="catalog-filters" role="group" aria-label="Categorias de procedimentos">
       <button type="button" aria-pressed={!filter} onClick={()=>setFilter('')}>Todos</button>
       {categories.map(name=><button key={name} type="button" aria-pressed={filter===name} onClick={()=>setFilter(name)}>{name}</button>)}

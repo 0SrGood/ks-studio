@@ -5,8 +5,10 @@ import { Action, Brand, Dialog, Empty, Intro, Notice, TextLink } from './ui'
 import { BookingList } from './booking'
 import { db,database,rpc,useStudio } from './studio'
 import { dayLabel,errorText,localDay,media, time, type Booking } from './data'
-import { PushToggle, releasePush } from './push'
+import { PushToggle } from './push'
+import { signOutAccount } from './session-actions'
 import { Captcha, captchaSiteKey } from './captcha'
+import { CustomerEntry } from './customer-entry'
 
 const redirect=()=>location.origin+location.pathname
 type AuthMode='login'|'signup'|'reset'|'recover'
@@ -74,6 +76,7 @@ export default function Account({journey=false}:{journey?:boolean}) {
   if(loading)return <div className="wrap page">Carregando seu perfil…</div>
   const tab=params.get('secao')||'agenda'
   const setTab=(tab:string)=>setParams({secao:tab})
+  if(!session&&!authEvent)return <CustomerEntry/>
   return <div className="wrap page account-page"><Intro label="ÁREA DA CLIENTE" title={journey?'Minha Jornada':profile?.name?'Olá, '+profile.name.trim().split(' ')[0]:'Meu perfil'} description={journey?'Acompanhe suas visitas, seus cuidados e as conquistas no Studio.':'Gerencie seus atendimentos e suas preferências.'}/>
     {!session||['PASSWORD_RECOVERY','ADMIN_INVITE','INVITE_INVALID'].includes(authEvent)?<SignIn/>:journey?<Journey customer={session.user.id}/>:<>
     {next&&<div className="next-visit"><CalendarDays size={25}/><div><span className="eyebrow">PRÓXIMO ATENDIMENTO</span><h3>{next.service_name}</h3><p>{dayLabel(next.starts_at)} · {time(next.starts_at)} · {settings.address}</p></div></div>}
@@ -140,7 +143,7 @@ function ProfileForm() {
   {confirm&&<Dialog title={confirm==='signout'?'Sair deste dispositivo?':'Solicitar exclusão?'} onClose={()=>setConfirm('')}>
     {confirm==='signout'&&session?.user.is_anonymous&&<p>Seu acesso de visitante está vinculado a este navegador. Vincule um e-mail para poder voltar a acessar o histórico.</p>}
     {confirm==='delete'&&<p>O Studio receberá sua solicitação e poderá responder pelo contato do perfil.</p>}
-    <Action disabled={busy} onClick={async()=>{setBusy(true);try{if(confirm==='signout'){if(session)await releasePush(session.user.id);const {error}=await database().auth.signOut();if(error)throw error}else{await rpc('request_deletion');await refresh()}setConfirm('')}catch(error){setMessage({text:errorText(error),success:false})}finally{setBusy(false)}}}>Confirmar</Action><Notice message={message.text} success={message.success}/>
+    <Action disabled={busy} onClick={async()=>{setBusy(true);try{if(confirm==='signout')await signOutAccount(session?.user.id);else{await rpc('request_deletion');await refresh()}setConfirm('')}catch(error){setMessage({text:errorText(error),success:false})}finally{setBusy(false)}}}>Confirmar</Action><Notice message={message.text} success={message.success}/>
   </Dialog>}</section>
 }
 type News={id:number;title:string;body:string;created_at:string;read_at:string|null}
@@ -202,4 +205,3 @@ function Journey({customer}:{customer:string}) {
   <section className="section"><h2>Selos Karyna</h2><div className="badges">{badges.map(b=><article key={b.id} className={awards[b.id]?'earned':''}>{awards[b.id]?<img width="50" height="45" src={media('monogram.webp')} alt="Conquistado"/>:<LockKeyhole size={24} aria-label="A conquistar"/>}<h3>{b.name}</h3><p>{awards[b.id]?'Conquistado em '+dayLabel(awards[b.id]):b.threshold?Math.min(history.length,b.threshold)+' de '+b.threshold+' visitas':b.anniversary?'Um ano desde a primeira visita':'Concedido pelo Studio'}</p>{b.benefit&&<p>{b.benefit}</p>}</article>)}</div></section>
   {photo&&<Dialog title="Meu resultado" onClose={()=>setPhoto(null)}><div className="comparison"><img src={photo.after} alt="Depois"/>{photo.before&&<img src={photo.before} alt="Antes" style={{clipPath:'inset(0 '+(100-position)+'% 0 0)'}}/>}</div>{photo.before&&<label className="field">Comparar antes e depois<input type="range" value={position} onChange={e=>setPosition(+e.target.value)}/></label>}</Dialog>}<Notice message={error}/></>
 }
-

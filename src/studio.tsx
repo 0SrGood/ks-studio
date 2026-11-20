@@ -81,13 +81,16 @@ export function StudioProvider({children}:{children:ReactNode}) {
     if (campaigns.data) setNews(campaigns.data)
   }
   async function refreshProfile() {
-    if (!db || !userId) return
+    if (!db) return
+    const {data:{session:activeSession}}=await db.auth.getSession()
+    const activeId=activeSession?.user.id
+    if(!activeId)return
     const [data,role] = await Promise.all([
-      db.from('profiles').select().eq('id',userId).maybeSingle(),
+      db.from('profiles').select().eq('id',activeId).maybeSingle(),
       db.rpc('is_admin'),
     ])
     const current=await db.auth.getSession()
-    if(current.data.session?.user.id!==userId)return
+    if(current.data.session?.user.id!==activeId)return
     setProfile(data.data)
     setAdmin(role.data === true && !current.data.session.user.is_anonymous)
   }

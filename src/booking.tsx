@@ -4,17 +4,14 @@ import { CalendarDays, Clock3, Copy, FileCheck2, MapPin, Receipt, Smartphone } f
 import { db, database, invoke, rpc, useStudio } from './studio'
 import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, isBookable, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
 import { Action, Dialog, DirectionButton, Empty, Intro, Notice, TextLink } from './ui'
+import { serviceArtwork } from './catalog'
+import './booking-steps.css'
+import {QuickService} from './quick-service'
+import {AppointmentCountdown} from './appointment-countdown'
 import { requestInstallation } from './installation'
 import { Captcha, captchaSiteKey } from './captcha'
 
-export async function ensureVisitor(captchaToken?:string) {
-  const auth=database().auth
-  const current=await auth.getSession()
-  if(current.data.session) return current.data.session
-  const {data,error}=await auth.signInAnonymously({options:{captchaToken}})
-  if(error||!data.session) throw new Error('Não foi possível iniciar sua sessão de agendamento. Tente novamente.')
-  return data.session
-}
+import {ensureVisitor} from './visitor'
 
 const weekdays=['dom','seg','ter','qua','qui','sex','sáb']
 function installInvite() {
@@ -38,6 +35,7 @@ export default function BookingPage() {
   const today=localDay()
   const requestedDay=params.get('dia')||''
   const validDay=/^\d{4}-\d{2}-\d{2}$/.test(requestedDay)&&requestedDay>=today&&requestedDay<=addDays(today,settings.booking_days)&&Number.isFinite(Date.parse(requestedDay))?requestedDay:today
+  const [confirmStep,setConfirmStep]=useState(false)
   const [selected,setSelected]=useState(params.get('servico')||'')
   const [week,setWeek]=useState(validDay)
   const [day,setDay]=useState(validDay)
@@ -117,26 +115,38 @@ export default function BookingPage() {
   if(location.hash.startsWith('#/pagamentos')) return <div className="wrap page narrow"><Intro label="ÁREA DA CLIENTE" title="Pagamentos"/><BookingList onlyPayments/></div>
   const days=Array.from({length:7},(_,i)=>addDays(week,i))
   const daySlots=slots.filter(s=>s.day===day)
-  return <div className="wrap page"><Intro label="AGENDA DO STUDIO" title={reschedule?'Reagendar atendimento':'Agende seu horário'} description="Escolha um procedimento, encontre o melhor horário e informe seu contato."/>
+  return <div className="wrap page booking-page"><Intro label="" title={reschedule?'Reagendar atendimento':confirmStep?'Confirme seu atendimento':'Agende seu atendimento'}/>
     {requestedService&&!isBookable(requestedService)&&<Notice message={'A agenda de '+requestedService.name+' ainda está a confirmar.'}/>}
-    {!service?<Empty title="Nenhum horário liberado">O Studio vai disponibilizar os horários dos procedimentos por aqui. <TextLink to="/procedimentos">Ver procedimentos</TextLink></Empty>:
-    <div className="booking-layout"><section className="booking-calendar"><label className="field">Procedimento<select value={selected} disabled={Boolean(reschedule)} onChange={e=>{setSelected(e.target.value);setSlot('');requestId.current=crypto.randomUUID()}}>{bookableServices.map(s=><option key={s.id} value={s.id}>{s.name} · {s.duration} min</option>)}</select></label>
+    <div className="booking-layout simple-booking"><section className="booking-calendar" hidden={confirmStep}>
       <div className="week-heading"><h2>{dayLabel(day)}</h2><div className="inline-actions">
         <DirectionButton label="Semana anterior" previous disabled={week<=today} onClick={()=>changeWeek(addDays(week,-7)<today?today:addDays(week,-7))}/>
         <DirectionButton label="Próxima semana" disabled={addDays(week,7)>addDays(today,settings.booking_days)} onClick={()=>changeWeek(addDays(week,7))}/>
       </div></div>
-      <div className="week-strip">{days.map(d=><button type="button" key={d} aria-pressed={d===day} onClick={()=>{setDay(d);setSlot('');requestId.current=crypto.randomUUID()}}>
+      <div className="week-strip">{days.map(d=><button type="button" key={d} aria-pressed={d===day} disabled={d>addDays(today,settings.booking_days)} onClick={()=>{setDay(d);setSlot('');requestId.current=crypto.randomUUID()}}>
         {weekdays[new Date(d+'T12:00:00-03:00').getUTCDay()]}<strong>{d.slice(-2)}</strong><span aria-label={loading?'Consultando disponibilidade':slots.some(s=>s.day===d)?'Com disponibilidade':'Sem disponibilidade'} className={slots.some(s=>s.day===d)?'free':''}/></button>)}</div>
       <button className="calendar-link" type="button" onClick={()=>setCalendar(true)}><CalendarDays size={18}/> Ver outras datas</button>
+      <section className="booking-procedures"><header className="section-title"><h2>Procedimentos de Karyna</h2><QuickService/></header>
+      <div className="booking-service-list" role="group" aria-label="Procedimentos">
+        {services.map(item=><div key={item.id}><button className="booking-service" type="button" aria-pressed={selected===item.id} disabled={!isBookable(item)||Boolean(reschedule&&item.id!==selected)}
+          onClick={()=>{setSelected(item.id);setSlot('');requestId.current=crypto.randomUUID()}}>
+          <span className="selection-circle" aria-hidden="true"/><span className="booking-service-copy"><strong>{item.name}</strong>
+          <small>{item.duration!==null?item.duration+' min':'Duração a confirmar'}</small><span>{item.price_cents!==null?currency(item.price_cents):'Valor a confirmar'}</span>
+          {!isBookable(item)&&<small>Agenda a confirmar</small>}</span>
+          <img src={serviceArtwork(item)} alt="" width="82" height="82"/>
+        </button><QuickService service={item}/></div>)}
+      </div></section>
+      {service&&<section className="booking-times"><h2>Escolha o horário</h2>
       {loading?<p role="status">Consultando horários…</p>:daySlots.length?<div className="slots" aria-label="Horários disponíveis">{daySlots.map(item=><button type="button" aria-pressed={item.starts_at===slot} onClick={()=>{setSlot(item.starts_at);requestId.current=crypto.randomUUID()}} key={item.starts_at}>{time(item.starts_at)}</button>)}</div>:<Empty title="Sem horários neste dia"><button className="calendar-link" type="button" onClick={()=>{setError('');setWaitlist(true)}}>Avise-me quando surgir uma vaga</button></Empty>}
+      </section>}
       <Notice message={feedback} success/>
+      <Action disabled={!slot||!service} onClick={()=>setConfirmStep(true)}>Continuar</Action>
     </section>
-    <section className="booking-summary"><h2>Seu atendimento</h2><div className="detail-note"><strong>{service.name}</strong><p>{currency(service.price_cents)} · {service.duration} min</p><p>{dayLabel(day)}{slot&&' · '+time(slot)}</p>
+    {service&&<section className="booking-summary" hidden={!confirmStep}><button type="button" className="calendar-link" onClick={()=>setConfirmStep(false)}>Voltar à escolha do horário</button><h2>Seu atendimento</h2><div className="detail-note"><strong>{service.name}</strong><p>{currency(service.price_cents)} · {service.duration} min</p><p>{dayLabel(day)}{slot&&' · '+time(slot)}</p>
       <p>{settings.address}</p><p>Prazo para cancelar: {settings.cancellation_hours} h. Para reagendar: {settings.reschedule_hours} h antes do atendimento.</p>
       {service.payment_conditions&&<p>{service.payment_conditions}</p>}</div>
       <form className="stack" onSubmit={advance} key={selected}>
         {!reschedule&&<><label className="field">Nome completo<input key={profile?.name||''} autoComplete="name" name="name" defaultValue={profile?.name} maxLength={120} required/></label>
-        <label className="field">WhatsApp com DDD<input key={profile?.phone||''} autoComplete="tel" type="tel" name="phone" defaultValue={profile?.phone} required maxLength={24}/></label>
+        <label className="field">WhatsApp com DDD<input key={profile?.phone||''} autoComplete="tel" type="tel" name="phone" defaultValue={profile?.phone||sessionStorage.getItem('studio-booking-phone')||''} required maxLength={24}/></label>
         <fieldset><legend>Forma de pagamento</legend>
           {service.onsite&&<label className="check"><input name="method" type="radio" value="onsite" defaultChecked required/> Pagar no local</label>}
           {service.pix&&availablePix&&<label className="check"><input name="method" type="radio" value="pix" defaultChecked={!service.onsite} required/> Pagar com Pix</label>}
@@ -147,7 +157,7 @@ export default function BookingPage() {
         <Action type="submit" disabled={busy||!slot||(needsCaptcha&&!captchaToken)||(!reschedule&&!service.onsite&&(!service.pix||!availablePix))}>{busy?'Confirmando…':reschedule?'Confirmar novo horário':'Continuar com agendamento'}</Action>
       </form>
       <Notice message={warning||waitlist?'':error}/>
-    </section></div>}
+    </section>}</div>
     {calendar&&<Dialog title="Ver outras datas" onClose={()=>setCalendar(false)}><MonthPicker initial={day} min={today} max={addDays(today,settings.booking_days)} select={value=>{changeWeek(value);setCalendar(false)}}/></Dialog>}
     {waitlist&&<Dialog title="Lista de espera" onClose={()=>setWaitlist(false)}><p>{dayLabel(day)}</p>
       <form className="stack" onSubmit={addWaitlist}><label className="field">Nome completo<input name="name" defaultValue={profile?.name} required maxLength={120}/></label><label className="field">WhatsApp<input name="phone" type="tel" defaultValue={profile?.phone} required maxLength={24}/></label>
@@ -282,7 +292,7 @@ function PixCheckout({id,onReceipt}:{id:string;onReceipt:()=>void}) {
 
 export function Confirmation({booking}:{booking:Booking}) {
   const {settings}=useStudio()
-  return <><Intro label="AGENDA DO STUDIO" title="Seu agendamento" description={appointmentStatus[booking.status]}/><section className="empty"><h3>{booking.service_name}</h3>
+  return <><Intro label="AGENDA DO STUDIO" title="Seu agendamento" description={appointmentStatus[booking.status]}/>{booking.status==='confirmed'&&<AppointmentCountdown startsAt={booking.starts_at} endsAt={booking.ends_at}/>}<section className="empty"><h3>{booking.service_name}</h3>
     <p>{dayLabel(booking.starts_at)} · {time(booking.starts_at)} · {booking.duration} min</p><p>{settings.address}</p><p>{currency(booking.amount_cents)} · {booking.method==='pix'?'Pix':'Pagar no local'}</p><p>{paymentStatus[booking.payment_state]}</p>
     <div className="inline-actions"><Action to="/perfil">Ver meus agendamentos</Action><Action kind="outline" onClick={()=>calendarFile(booking,settings.address)}><CalendarDays size={17}/> Adicionar ao calendário</Action></div>
     <a href={maps} className="text-link" target="_blank" rel="noreferrer"><MapPin size={17}/> Abrir localização</a>{settings.contact_validated&&settings.whatsapp&&<a className="text-link" href={'https://wa.me/'+settings.whatsapp}>Falar com o Studio</a>}</section></>
@@ -309,7 +319,7 @@ export function BookingList({onlyPayments=false}:{onlyPayments?:boolean}) {
   const now=Date.now()
   if(loading)return <p role="status">Carregando agendamentos…</p>
   return <>{items.length?items.map(item=><div className="data-row" key={item.id}><div><h3>{item.service_name}</h3><p><Clock3 size={14}/> {dayLabel(item.starts_at)} · {time(item.starts_at)} · {currency(item.amount_cents)}</p>
-    <p>{appointmentStatus[item.status]} · {paymentStatus[item.payment_state]}</p></div>
+    <p>{appointmentStatus[item.status]} · {paymentStatus[item.payment_state]}</p>{item.status==='confirmed'&&new Date(item.ends_at).getTime()>now&&<AppointmentCountdown startsAt={item.starts_at} endsAt={item.ends_at}/>}</div>
     {item.method==='pix'&&item.payment_state!=='paid'&&item.status!=='cancelled'&&<Action to={'/pagamentos?pix='+item.id} kind="outline">Ver Pix</Action>}
     {!onlyPayments&&item.status==='confirmed'&&new Date(item.starts_at).getTime()>now&&<div className="inline-actions">
       <Action kind="quiet" onClick={()=>calendarFile(item,settings.address)}>Calendário</Action><Action kind="outline" to={'/agendar?servico='+item.service_id+'&reagendar='+item.id}>Reagendar</Action>

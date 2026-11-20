@@ -1,11 +1,14 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, CalendarDays, House, Settings2, Sparkles, UserRound } from 'lucide-react'
+import { BookOpen, CalendarDays, House, Ellipsis, Sparkles, UserRound } from 'lucide-react'
 import { Catalog, Procedure, Courses, CourseDetail, Legal } from './public'
 import { Action, Brand } from './ui'
 import { useStudio } from './studio'
 import { AppHome } from './app-home'
+import { MoreSheet } from './more-sheet'
+import { CustomerEntry } from './customer-entry'
 import './app-shell.css'
+import './more-sheet.css'
 
 const Booking = lazy(()=>import('./booking'))
 const Account = lazy(()=>import('./account'))
@@ -17,7 +20,6 @@ const tabs = [
   ['/agendar','Agendar', CalendarDays],
   ['/procedimentos','Procedimentos', Sparkles],
   ['/minha-jornada','Histórico', BookOpen],
-  ['/perfil','Perfil', UserRound],
 ] as const
 
 function StudioRedirect({path=''}:{path?:string}) {
@@ -27,10 +29,13 @@ function StudioRedirect({path=''}:{path?:string}) {
 }
 export function App() {
   const {pathname} = useLocation()
-  const {admin,authEvent} = useStudio()
+  const {authEvent} = useStudio()
+  const {admin,loading}=useStudio()
+  const [more,setMore]=useState(false)
   const navigate=useNavigate()
   const management=pathname.startsWith('/admin')
   useEffect(()=>{window.scrollTo(0,0)},[pathname])
+  useEffect(()=>{if(!loading&&admin&&pathname==='/')navigate('/admin',{replace:true})},[admin,loading,pathname,navigate])
   useEffect(()=>{
     if(['PASSWORD_RECOVERY','ADMIN_INVITE','INVITE_INVALID'].includes(authEvent)&&pathname!=='/perfil')navigate('/perfil',{replace:true})
   },[authEvent,navigate,pathname])
@@ -46,14 +51,16 @@ export function App() {
         <NavLink end to="/">Início</NavLink><NavLink to="/agendar">Agendar</NavLink><NavLink to="/procedimentos">Procedimentos</NavLink><NavLink to="/minha-jornada">Histórico</NavLink>
       </nav>}
       <div className="header-actions">
-        {!management&&<Link to="/perfil" className="app-header-link"><UserRound size={18}/><span>Perfil</span></Link>}
-        {management?<Link className="app-header-link" to="/">Voltar ao app</Link>:<Link aria-label="Administração" title="Administração" className="app-header-link" to="/admin"><Settings2 size={18}/>{admin&&<span>Administração</span>}</Link>}
+        {!management&&<Link to="/perfil" className="app-header-link" aria-label="Perfil"><UserRound size={18} aria-hidden="true"/><span>Perfil</span></Link>}
+        {management&&<Link className="app-header-link" to="/perfil">Meu perfil</Link>}
+        <button type="button" className={'app-header-link more-trigger'+(management?'':' more-trigger--desktop')} aria-label="Mais" aria-haspopup="dialog" aria-expanded={more} onClick={()=>setMore(true)}><Ellipsis size={21} aria-hidden="true"/><span>Mais</span></button>
       </div>
     </div></header>
     <main id="main" tabIndex={-1}>
       <Suspense fallback={<p className="wrap loading" role="status">Carregando…</p>}>
         <Routes>
           <Route path="/" element={<AppHome/>}/>
+          <Route path="/cadastro" element={<CustomerEntry/>}/>
           <Route path="/sobre" element={<StudioRedirect path="sobre"/>}/>
           <Route path="/portfolio" element={<StudioRedirect path="portfolio"/>}/>
           <Route path="/procedimentos" element={<Catalog/>}/><Route path="/procedimentos/:id" element={<Procedure/>}/>
@@ -66,7 +73,10 @@ export function App() {
         </Routes>
       </Suspense>
     </main>
-    {!management&&<nav className="mobile-tabs" aria-label="Navegação do aplicativo">{tabs.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}</nav>}
+    {!management&&<nav className="mobile-tabs" aria-label="Navegação do aplicativo">
+      {tabs.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}
+      <button type="button" className="more-trigger" aria-haspopup="dialog" aria-expanded={more} onClick={()=>setMore(true)}><Ellipsis size={21} aria-hidden="true"/><span>Mais</span></button>
+    </nav>}
+    {more&&<MoreSheet close={()=>setMore(false)}/>}
   </div>
 }
-
