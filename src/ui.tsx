@@ -12,6 +12,12 @@ export function NextArtwork({className=''}:{className?:string}) {
   return <img className={'next-art '+className} src={media('button-next.png')} alt="" width="42" height="42"/>
 }
 
+export function DirectionButton({label,previous=false,...props}:ButtonHTMLAttributes<HTMLButtonElement> & {label:string;previous?:boolean}) {
+  return <button type="button" className="small-control direction-control" aria-label={label} {...props}>
+    <NextArtwork className={previous?'next-art--reverse':''}/>
+  </button>
+}
+
 export function Action({to,href,children,kind='ornate',className='',...props}:ButtonHTMLAttributes<HTMLButtonElement> & {to?:string;href?:string;children:ReactNode;kind?:'ornate'|'outline'|'quiet'}) {
   const cls = 'action action--' + kind + ' ' + className
   const body = <><span className="action-decoration" aria-hidden="true"/><span className="action-label">{children}</span></>

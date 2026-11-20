@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Copy, FileCheck2, MapPin, Receipt, Smartphone } from 'lucide-react'
+import { CalendarDays, Clock3, Copy, FileCheck2, MapPin, Receipt, Smartphone } from 'lucide-react'
 import { db, database, invoke, rpc, useStudio } from './studio'
 import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, isBookable, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
-import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
+import { Action, Dialog, DirectionButton, Empty, Intro, Notice, TextLink } from './ui'
 import { requestInstallation } from './installation'
 import { Captcha, captchaSiteKey } from './captcha'
 
@@ -121,7 +121,10 @@ export default function BookingPage() {
     {requestedService&&!isBookable(requestedService)&&<Notice message={'A agenda de '+requestedService.name+' ainda está a confirmar.'}/>}
     {!service?<Empty title="Nenhum horário liberado">O Studio vai disponibilizar os horários dos procedimentos por aqui. <TextLink to="/procedimentos">Ver procedimentos</TextLink></Empty>:
     <div className="booking-layout"><section className="booking-calendar"><label className="field">Procedimento<select value={selected} disabled={Boolean(reschedule)} onChange={e=>{setSelected(e.target.value);setSlot('');requestId.current=crypto.randomUUID()}}>{bookableServices.map(s=><option key={s.id} value={s.id}>{s.name} · {s.duration} min</option>)}</select></label>
-      <div className="week-heading"><h2>{dayLabel(day)}</h2><div className="inline-actions"><button className="small-control" aria-label="Semana anterior" disabled={week<=today} onClick={()=>changeWeek(addDays(week,-7)<today?today:addDays(week,-7))}><ChevronLeft/></button><button className="small-control" aria-label="Próxima semana" disabled={addDays(week,7)>addDays(today,settings.booking_days)} onClick={()=>changeWeek(addDays(week,7))}><ChevronRight/></button></div></div>
+      <div className="week-heading"><h2>{dayLabel(day)}</h2><div className="inline-actions">
+        <DirectionButton label="Semana anterior" previous disabled={week<=today} onClick={()=>changeWeek(addDays(week,-7)<today?today:addDays(week,-7))}/>
+        <DirectionButton label="Próxima semana" disabled={addDays(week,7)>addDays(today,settings.booking_days)} onClick={()=>changeWeek(addDays(week,7))}/>
+      </div></div>
       <div className="week-strip">{days.map(d=><button type="button" key={d} aria-pressed={d===day} onClick={()=>{setDay(d);setSlot('');requestId.current=crypto.randomUUID()}}>
         {weekdays[new Date(d+'T12:00:00-03:00').getUTCDay()]}<strong>{d.slice(-2)}</strong><span aria-label={loading?'Consultando disponibilidade':slots.some(s=>s.day===d)?'Com disponibilidade':'Sem disponibilidade'} className={slots.some(s=>s.day===d)?'free':''}/></button>)}</div>
       <button className="calendar-link" type="button" onClick={()=>setCalendar(true)}><CalendarDays size={18}/> Ver outras datas</button>
@@ -164,7 +167,11 @@ function MonthPicker({initial,min,max,select}:{initial:string;min:string;max:str
   const start=localDay(base)
   const display=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'America/Fortaleza'}).format(base)
   const count=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+1,0)).getUTCDate()
-  return <><div className="data-row"><button className="small-control" aria-label="Mês anterior" disabled={start.slice(0,7)<=min.slice(0,7)} onClick={()=>setOffset(offset-1)}><ChevronLeft/></button><strong>{display}</strong><button className="small-control" aria-label="Próximo mês" disabled={start.slice(0,7)>=max.slice(0,7)} onClick={()=>setOffset(offset+1)}><ChevronRight/></button></div>
+  return <><div className="data-row">
+    <DirectionButton label="Mês anterior" previous disabled={start.slice(0,7)<=min.slice(0,7)} onClick={()=>setOffset(current=>current-1)}/>
+    <strong>{display}</strong>
+    <DirectionButton label="Próximo mês" disabled={start.slice(0,7)>=max.slice(0,7)} onClick={()=>setOffset(current=>current+1)}/>
+  </div>
     <div className="month-grid">{weekdays.map(d=><small key={d}>{d}</small>)}{Array.from({length:base.getUTCDay()},(_,i)=><span key={'gap'+i}/>)}{Array.from({length:count},(_,i)=>{const date=addDays(start,i);return <button key={date} type="button" disabled={date<min||date>max} aria-label={dayLabel(date)} onClick={()=>select(date)}>{i+1}</button>})}</div></>
 }
 
