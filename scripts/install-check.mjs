@@ -46,4 +46,3 @@ try{
   assert.equal((await response.json()).name,'Ks Studio')
   console.log('Instalação imediata, tutoriais iPhone/Android, retorno, recarga, dados preservados e modo instalado verificados.')
 }finally{await browser.close()}
-

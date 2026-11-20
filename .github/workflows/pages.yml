@@ -53,7 +53,7 @@ jobs:
         env:
           PAGES_URL: ${{ steps.deploy.outputs.page_url }}
         run: |
-          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/" | grep -q "Studio Karyna Santos"
-          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/manifest.webmanifest" | grep -q "Studio Karyna Santos"
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/" | grep -q "Ks Studio"
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/manifest.webmanifest" | grep -q "Ks Studio"
           curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/studio.html" | grep -q "Conheça o Studio Karyna Santos"
 
