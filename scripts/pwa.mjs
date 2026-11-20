@@ -8,7 +8,7 @@ const entries = (await readdir('dist', { recursive: true, withFileTypes: true })
 const hash = createHash('sha256')
 for (const entry of entries) hash.update(await readFile('dist/' + entry))
 const version = hash.digest('hex').slice(0, 16)
-const shell = entries.filter(file => /^(index\.html|manifest\.webmanifest|assets\/|icons\/|media\/(hero|monogram|logo|button))/.test(file))
+const shell = entries.filter(file => /^(index\.html|manifest\.webmanifest|assets\/|icons\/|media\/(hero|monogram|logo|button|brand-wordmark|catalog\/))/.test(file))
 await writeFile('dist/sw.js', `
 const cacheName = 'studio-ks-${version}';
 const scope = self.registration.scope;

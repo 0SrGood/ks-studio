@@ -1,0 +1,50 @@
+.brand .brand-mark{width:43px;height:40px;flex:none}
+.brand .brand-wordmark{width:187px;max-width:none;height:auto}
+.next-art{width:40px;height:40px;flex:none;object-fit:contain;transition:transform .24s cubic-bezier(.2,.75,.25,1),filter .24s ease}
+:is(.catalog-card-link,.app-link,.picture-link,.next-link):is(:hover,:focus-visible) .next-art{transform:translateX(3px);filter:brightness(1.1)}
+:is(.catalog-card-link,.app-link,.picture-link,.next-link):active .next-art{transform:scale(.91)}
+.picture-link{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;font-size:.91rem;font-weight:700;color:var(--wine)}
+.picture-link .next-art{width:36px;height:36px}
+.catalog-page{max-width:1090px}
+.catalog-page h1{font-size:clamp(3rem,6vw,5rem);margin-bottom:20px}
+.catalog-filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:24px}
+.catalog-filters button{min-height:45px;padding:7px 14px;border:1px solid var(--line);background:#f9f4ef;color:var(--wine);font-size:.86rem;font-weight:650;white-space:nowrap;transition:background-color .2s,border-color .2s,color .2s}
+.catalog-filters button:hover{border-color:var(--rose)}
+.catalog-filters button[aria-pressed=true]{border-color:var(--wine);background:var(--wine);color:#fff9f0}
+.catalog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.catalog-card{min-width:0}
+.catalog-card-link{display:flex;flex-direction:column;height:100%;background:#fcf8f3;border:1px solid var(--line);transition:border-color .25s,background-color .25s}
+.catalog-card-link:is(:hover,:focus-visible){border-color:#bd998a;background:#f6ede5}
+.catalog-image{position:relative;aspect-ratio:4/3;background:#e9d8cb;overflow:hidden}
+.catalog-photo{width:100%;height:100%;object-fit:cover;transition:transform .45s cubic-bezier(.2,.7,.25,1)}
+.catalog-card-link:is(:hover,:focus-visible) .catalog-photo{transform:scale(1.035)}
+.catalog-open{position:absolute;bottom:9px;right:10px}
+.catalog-card-label{padding:11px 12px;flex:1}
+.catalog-card-label h3{font-size:clamp(1.53rem,2.25vw,2.05rem);line-height:.99;overflow-wrap:anywhere}
+.catalog-category{display:block;color:#806456;font-size:.71rem;line-height:1.2;font-weight:700;margin-bottom:5px}
+.catalog-card-label small{display:block;margin-top:7px;color:var(--muted);font-size:.76rem}
+.catalog-note{color:var(--muted);font-size:.78rem;margin-top:14px}
+.catalog-note:empty{display:none}
+.catalog-back{display:inline-flex;gap:8px;align-items:center;min-height:44px;margin-bottom:12px;color:var(--wine);font-weight:650}
+.catalog-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:5%;align-items:center}
+.catalog-detail-image{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:#e9d8cb}
+.catalog-detail-grid .intro h1{font-size:clamp(2.75rem,4.5vw,4.7rem)}
+.catalog-detail-grid .intro{margin-bottom:14px}
+.catalog-detail-note{border-top:1px solid var(--line);padding:11px 0}
+.catalog-detail-note summary{font-weight:650;color:var(--wine)}
+.catalog-detail-note p{white-space:pre-line;margin-top:8px}
+@media(max-width:800px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){
+  .brand .brand-mark{width:37px;height:36px}.brand .brand-wordmark{width:clamp(125px,40vw,164px)}
+  .catalog-page{padding-top:22px}.catalog-page h1{margin-bottom:14px;font-size:3rem}
+  .catalog-filters{gap:5px;margin-bottom:16px}.catalog-filters button{font-size:.79rem;padding-inline:9px}
+  .catalog-grid{gap:10px}.catalog-card-label{padding:9px 7px}
+  .catalog-open{width:30px;height:30px;bottom:6px;right:7px}
+  .catalog-card-label h3{font-size:clamp(1.17rem,4.6vw,1.6rem);line-height:.98}
+  .catalog-category{font-size:.64rem}
+  .catalog-detail-grid{grid-template-columns:1fr;gap:20px}
+}
+@media(max-width:360px){.catalog-filters button{padding-inline:6px;font-size:.75rem}}
+@media(prefers-reduced-motion:reduce){
+  .catalog-card-link:is(:hover,:focus-visible) .catalog-photo,:is(.catalog-card-link,.app-link,.picture-link,.next-link):is(:hover,:focus-visible,:active) .next-art{transform:none}
+}

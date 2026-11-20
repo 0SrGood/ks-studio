@@ -1,15 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CalendarDays, Clock3, Camera as Instagram, MapPin, ScanLine, Star, ArrowUpRight, GraduationCap } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock3, Camera as Instagram, MapPin, ScanLine, Star, ArrowUpRight, GraduationCap, Heart } from 'lucide-react'
 import { address, appHref, coursePost, currency, dayLabel, errorText, instagram, isBookable, maps, media, time, type Cohort, type Service, type Work } from './data'
 import { db, invoke, rpc, useStudio } from './studio'
-import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
-
-const specialties = [
-  ['Sobrancelhas','Design personalizado, Flow Design, henna e Flow Brows.'],
-  ['Micropigmentação','Técnicas sombreadas, fio a fio e micropigmentação labial.'],
-  ['Cursos VIP','Técnica e experiência para profissionais da beleza.'],
-]
+import { Action, Dialog, Empty, Intro, NextArtwork, Notice, TextLink } from './ui'
+import { serviceArtwork } from './catalog'
+import './catalog.css'
 
 export function HomePage() {
   const {settings,services,works,news,publicError}=useStudio()
@@ -19,14 +15,16 @@ export function HomePage() {
       <div className="hero-copy">
         <span className="eyebrow"><span className="rule"/> JOÃO CÂMARA, RN</span>
         <h1 id="hero-title">{headline}</h1>
-        <p>Design de sobrancelhas e micropigmentação com um olhar atento à beleza de cada mulher.</p>
-        <div className="hero-actions"><Action href={appHref('/agendar')}><CalendarDays size={17}/> Agendar meu horário</Action><Action href={appHref('/procedimentos')} kind="outline">Ver procedimentos</Action></div>
+        <p>Sobrancelhas e micropigmentação em João Câmara.</p>
+        <div className="hero-actions"><Action href={appHref('/agendar')}><CalendarDays size={17}/> Agendar meu horário</Action><a className="picture-link" href={appHref('/procedimentos')}>Procedimentos <NextArtwork/></a></div>
       </div>
       <figure className="hero-photo"><picture><source media="(max-width: 600px)" srcSet={media('hero-mobile.webp')}/><img fetchPriority="high" src={media('hero.webp')} alt="Karyna Santos com o uniforme do Studio"/></picture>
         <figcaption><span>Karyna Santos</span><small>DESIGNER E MICROPIGMENTADORA</small></figcaption></figure>
     </section>
-    <section className="specialties wrap" aria-label="Especialidades do Studio">
-      {specialties.map(([name,copy])=><div key={name}><h2>{name}</h2><p>{copy}</p></div>)}
+    <section className="wrap section">
+      <header className="section-title"><h2>Procedimentos</h2><a className="picture-link" href={appHref('/procedimentos')}>Ver catálogo <NextArtwork/></a></header>
+      {services.length>0&&<div className="catalog-grid">{services.slice(0,3).map(service=><ServiceCard key={service.id} service={service} external/>)}</div>}
+      <Notice message={publicError}/>
     </section>
     {news.length>0&&<section className="wrap section"><header className="section-title"><div><span className="eyebrow">NO STUDIO</span><h2>Novidades</h2></div></header>
       <div className="editorial-grid">{news.map(item=><article key={item.id}>{item.image&&<img src={item.image} alt="" loading="lazy"/>}<h3>{item.title}</h3><p>{item.body}</p></article>)}</div></section>}
@@ -34,21 +32,17 @@ export function HomePage() {
       <header className="section-title"><div><span className="eyebrow">PORTFÓLIO</span><h2>Resultados que <em>falam por si.</em></h2></div><TextLink to="/portfolio">Ver portfólio</TextLink></header>
       <WorkGallery items={works.slice(0,3)}/>
     </section>
-    <section className="section about wrap"><img loading="lazy" src={media('about.webp')} alt="Retrato de Karyna Santos"/><div><span className="eyebrow">QUEM ESTÁ POR TRÁS DO STUDIO</span><h2>Conheça<br/><em>Karyna Santos.</em></h2><p>{settings.bio}</p><div className="inline-actions"><TextLink to="/sobre">Conhecer minha trajetória</TextLink><a className="text-link" href={instagram} target="_blank" rel="noreferrer"><Instagram size={16}/> Instagram <ArrowUpRight size={15}/></a></div></div></section>
-    <section className="wrap section"><header className="section-title"><div><span className="eyebrow">CATÁLOGO</span><h2>Cuidados do Studio</h2></div><a className="text-link" href={appHref('/procedimentos')}>Ver todos no app</a></header>
-      {services.length ? <div className="editorial-grid">{services.slice(0,3).map(service=><article className="service-card" key={service.id}><h3><a href={appHref('/procedimentos/'+service.id)}>{service.name}</a></h3><p>{service.description}</p></article>)}</div> : <Empty title="Catálogo em preparação">Os procedimentos, valores e durações serão divulgados pelo Studio.</Empty>}
-      <Notice message={publicError}/>
-    </section>
+    <section className="section about wrap"><img loading="lazy" src={media('about.webp')} alt="Retrato de Karyna Santos"/><div><h2>Conheça<br/><em>Karyna Santos.</em></h2><p>Especialista em sobrancelhas, micropigmentadora e instrutora de cursos VIP.</p><Link to="/sobre" className="picture-link">Minha trajetória <NextArtwork/></Link></div></section>
     <section className="course-feature"><div className="wrap"><div><span className="eyebrow">FORMAÇÃO PROFISSIONAL</span><h2>Aprenda com<br/><em>Karyna Santos.</em></h2><p>Conhecimento, técnica e experiência compartilhados com quem deseja crescer na área da beleza.</p><Action to="/cursos">Conhecer os cursos</Action></div><img loading="lazy" src={media('courses.webp')} alt="Karyna Santos com instrumentos de design de sobrancelhas"/></div></section>
     <section className="wrap section visit"><div><span className="eyebrow">JOÃO CÂMARA, RN</span><h2>Visite o Studio</h2><p>{settings.address || address}</p><a className="text-link" href={maps} target="_blank" rel="noreferrer"><MapPin size={18}/> Como chegar <ArrowUpRight size={15}/></a></div><div><Star size={25}/><h3>Avaliações no Google</h3><p>Leia as experiências compartilhadas por quem já visitou o Studio.</p><a className="text-link" href={settings.google_url||maps} target="_blank" rel="noreferrer">Abrir no Google <ArrowUpRight size={15}/></a></div></section>
   </>
 }
 
-function ServiceCard({service}:{service:Service}) {
-  return <article className="service-card">{service.photo&&<Link to={'/procedimentos/'+service.id}><img loading="lazy" src={service.photo} alt={service.name}/></Link>}
-    <span className="eyebrow">{service.category}</span><h3><Link to={'/procedimentos/'+service.id}>{service.name}</Link></h3><p>{service.description}</p>
-    <ServiceInfo service={service}/>
-    {isBookable(service)?<Action to={'/agendar?servico='+service.id} kind="outline">Agendar</Action>:<TextLink to={'/procedimentos/'+service.id}>Ver detalhes</TextLink>}</article>
+function ServiceCard({service,external=false}:{service:Service;external?:boolean}) {
+  const path='/procedimentos/'+service.id
+  const content=<><div className="catalog-image"><img className="catalog-photo" src={serviceArtwork(service)} alt="" width="720" height="540" loading="lazy" decoding="async"/><NextArtwork className="catalog-open"/></div>
+    <div className="catalog-card-label"><span className="catalog-category">{service.category}</span><h3>{service.name}</h3>{isBookable(service)&&<small>{currency(service.price_cents)} · {service.duration} min</small>}</div></>
+  return <article className="catalog-card">{external?<a className="catalog-card-link" href={appHref(path)}>{content}</a>:<Link className="catalog-card-link" to={path} aria-label={service.name}>{content}</Link>}</article>
 }
 function ServiceInfo({service}:{service:Service}){
   return <div className="metadata">{service.price_cents!==null&&<strong>{currency(service.price_cents)}</strong>}{service.duration!==null&&<span><Clock3 size={15}/>{service.duration} min</span>}
@@ -58,12 +52,13 @@ export function Catalog() {
   const {services,publicError}=useStudio()
   const [filter,setFilter]=useState('')
   const categories=[...new Set(services.map(service=>service.category))]
-  return <div className="wrap page"><Intro label="O CATÁLOGO DO STUDIO" title="Procedimentos" description="Explore os cuidados disponíveis e escolha um horário para o seu atendimento."/>
-    {categories.length>0&&<label className="field filter">Categoria<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="">Todas</option>{categories.map(name=><option key={name}>{name}</option>)}</select></label>}
-    {services.length?<div className="editorial-grid">{services.filter(s=>!filter||s.category===filter).map(service=><ServiceCard key={service.id} service={service}/>)}</div>:<Empty title="Catálogo em preparação">Os serviços disponíveis aparecerão aqui com valores e duração.</Empty>}
-    <details className="consult"><summary>Descubra seu próximo cuidado</summary><p>Qual tipo de cuidado você gostaria de conhecer?</p>
-    {categories.map(category=><Action key={category} kind="outline" onClick={()=>setFilter(category)}>{category}</Action>)}
-    {!categories.length&&<p>As sugestões estarão disponíveis com a abertura do catálogo.</p>}</details>
+  return <div className="wrap page catalog-page"><h1>Procedimentos</h1>
+    {categories.length>0&&<div className="catalog-filters" role="group" aria-label="Categorias de procedimentos">
+      <button type="button" aria-pressed={!filter} onClick={()=>setFilter('')}>Todos</button>
+      {categories.map(name=><button key={name} type="button" aria-pressed={filter===name} onClick={()=>setFilter(name)}>{name}</button>)}
+    </div>}
+    {services.length?<><div className="catalog-grid">{services.filter(s=>!filter||s.category===filter).map(service=><ServiceCard key={service.id} service={service}/>)}</div>
+      <p className="catalog-note">{services.some(s=>!s.photo)&&'Imagens de apoio ilustrativas.'}{!services.some(isBookable)&&' Horários a confirmar.'}</p></>:<Empty title="Catálogo em preparação"/>}
     <Notice message={publicError}/></div>
 }
 export function Procedure() {
@@ -77,11 +72,17 @@ export function Procedure() {
     try{const added=await rpc<boolean>('toggle_favorite',{p_id:id});setStatus(added?'Procedimento salvo nos favoritos.':'Procedimento retirado dos favoritos.')}
     catch(error){setStatus(errorText(error))}
   }
-  return <div className="wrap page"><TextLink to="/procedimentos">Todos os procedimentos</TextLink><Intro label={service.category} title={service.name} description={service.description}/>
-    <div className="detail-grid"><div>{service.photo&&<img className="detail-photo" src={service.photo} alt={service.name}/>}
-    <ServiceInfo service={service}/>
-    <div className="inline-actions">{isBookable(service)&&<Action to={'/agendar?servico='+service.id}>Agendar procedimento</Action>}{session&&<Action kind="outline" onClick={save}>Favorito</Action>}</div><Notice message={status} success/></div>
-    <div>{details.filter(([,body])=>body).map(([title,body])=><section className="detail-note" key={title}><h3>{title}</h3><p>{body}</p></section>)}</div></div>
+  return <div className="wrap page catalog-detail">
+    <Link to="/procedimentos" className="catalog-back"><ArrowLeft size={18}/> Procedimentos</Link>
+    <div className="catalog-detail-grid"><figure><img className="catalog-detail-image" src={serviceArtwork(service)} width="720" height="540" alt={service.photo?service.name:''}/>
+      {!service.photo&&<figcaption className="catalog-note">Imagem ilustrativa</figcaption>}</figure>
+    <div>
+      <Intro label={service.category} title={service.name} description={service.description}/>
+      <ServiceInfo service={service}/>
+      <div className="inline-actions">{isBookable(service)&&<Action to={'/agendar?servico='+service.id}><CalendarDays size={18}/> Agendar</Action>}{session&&<Action kind="outline" onClick={save}><Heart size={17}/> Favorito</Action>}</div>
+      <Notice message={status} success/>
+      {details.filter(([,body])=>body).map(([title,body])=><details className="catalog-detail-note" key={title}><summary>{title}</summary><p>{body}</p></details>)}
+    </div></div>
     {works.some(work=>work.service_id===id)&&<section className="section"><h2>Resultados</h2><WorkGallery items={works.filter(work=>work.service_id===id)}/></section>}</div>
 }
 

@@ -5,7 +5,11 @@ import { media } from './data'
 
 export function Brand({full=false}:{full?:boolean}) {
   return full ? <img className="brand-full" src={media('logo.webp')} alt="Karyna Santos Micropigmentadora"/> :
-  <span className="brand"><img src={media('monogram.webp')} width="44" height="40" alt=""/><span>Karyna Santos<small>STUDIO DE BELEZA</small></span></span>
+  <span className="brand"><img className="brand-mark" src={media('monogram.webp')} width="44" height="40" alt=""/><img className="brand-wordmark" src={media('brand-wordmark.webp')} width="500" height="81" alt="Karyna Santos Micropigmentadora"/></span>
+}
+
+export function NextArtwork({className=''}:{className?:string}) {
+  return <img className={'next-art '+className} src={media('button-next.png')} alt="" width="42" height="42"/>
 }
 
 export function Action({to,href,children,kind='ornate',className='',...props}:ButtonHTMLAttributes<HTMLButtonElement> & {to?:string;href?:string;children:ReactNode;kind?:'ornate'|'outline'|'quiet'}) {
