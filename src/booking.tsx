@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Copy, FileCheck2, MapPin, Receipt, Smartphone } from 'lucide-react'
 import { db, database, invoke, rpc, useStudio } from './studio'
-import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
+import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, isBookable, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
 import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
 import { requestInstallation } from './installation'
 import { Captcha, captchaSiteKey } from './captcha'
@@ -59,12 +59,16 @@ export default function BookingPage() {
   const bookingId=params.get('pix')
   const reschedule=params.get('reagendar')
   const requestId=useRef(crypto.randomUUID())
-  const service=services.find(item=>item.id===selected)
-  useEffect(()=>{if(services.length&&!services.some(s=>s.id===selected))setSelected(services[0].id)},[services,selected])
+  const bookableServices=services.filter(isBookable)
+  const service=bookableServices.find(item=>item.id===selected)
+  const requestedService=services.find(item=>item.id===params.get('servico'))
+  useEffect(()=>{
+    if(!bookableServices.some(s=>s.id===selected))setSelected(bookableServices[0]?.id||'')
+  },[services,selected])
   useEffect(()=>{if(db)void rpc<boolean>('pix_enabled').then(setAvailablePix).catch(()=>setAvailablePix(false))},[])
   useEffect(()=>{
     let active=true
-    if(!selected||!db)return
+    if(!service||!db)return
     setLoading(true);setSlots([]);setError('')
     void rpc<Slot[]>('availability',{p_service:selected,p_from:week,p_to:addDays(week,6)}).then(items=>{if(active)setSlots(items)}).catch(error=>{if(active)setError(errorText(error))}).finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
@@ -114,8 +118,9 @@ export default function BookingPage() {
   const days=Array.from({length:7},(_,i)=>addDays(week,i))
   const daySlots=slots.filter(s=>s.day===day)
   return <div className="wrap page"><Intro label="AGENDA DO STUDIO" title={reschedule?'Reagendar atendimento':'Agende seu horário'} description="Escolha um procedimento, encontre o melhor horário e informe seu contato."/>
-    {!service?<Empty title="Agenda online em preparação">Os horários aparecerão aqui assim que o Studio publicar os procedimentos e abrir a agenda. <TextLink to="/procedimentos">Conhecer os procedimentos</TextLink></Empty>:
-    <div className="booking-layout"><section className="booking-calendar"><label className="field">Procedimento<select value={selected} disabled={Boolean(reschedule)} onChange={e=>{setSelected(e.target.value);setSlot('');requestId.current=crypto.randomUUID()}}>{services.map(s=><option key={s.id} value={s.id}>{s.name} · {s.duration} min</option>)}</select></label>
+    {requestedService&&!isBookable(requestedService)&&<Notice message={'A agenda de '+requestedService.name+' ainda está a confirmar.'}/>}
+    {!service?<Empty title="Nenhum horário liberado">O Studio vai disponibilizar os horários dos procedimentos por aqui. <TextLink to="/procedimentos">Ver procedimentos</TextLink></Empty>:
+    <div className="booking-layout"><section className="booking-calendar"><label className="field">Procedimento<select value={selected} disabled={Boolean(reschedule)} onChange={e=>{setSelected(e.target.value);setSlot('');requestId.current=crypto.randomUUID()}}>{bookableServices.map(s=><option key={s.id} value={s.id}>{s.name} · {s.duration} min</option>)}</select></label>
       <div className="week-heading"><h2>{dayLabel(day)}</h2><div className="inline-actions"><button className="small-control" aria-label="Semana anterior" disabled={week<=today} onClick={()=>changeWeek(addDays(week,-7)<today?today:addDays(week,-7))}><ChevronLeft/></button><button className="small-control" aria-label="Próxima semana" disabled={addDays(week,7)>addDays(today,settings.booking_days)} onClick={()=>changeWeek(addDays(week,7))}><ChevronRight/></button></div></div>
       <div className="week-strip">{days.map(d=><button type="button" key={d} aria-pressed={d===day} onClick={()=>{setDay(d);setSlot('');requestId.current=crypto.randomUUID()}}>
         {weekdays[new Date(d+'T12:00:00-03:00').getUTCDay()]}<strong>{d.slice(-2)}</strong><span aria-label={loading?'Consultando disponibilidade':slots.some(s=>s.day===d)?'Com disponibilidade':'Sem disponibilidade'} className={slots.some(s=>s.day===d)?'free':''}/></button>)}</div>

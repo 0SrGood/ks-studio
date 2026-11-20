@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 
 export default defineConfig({
   base: './',
+  build: {rolldownOptions: { input: { app: resolve('index.html'), studio: resolve('studio.html') } }},
   plugins: [react(), {
     name: 'exclude-unapproved-client-media',
     apply: 'build',

@@ -1,10 +1,23 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { createClient, type Session } from '@supabase/supabase-js'
 import { defaults, localWorks, type Profile, type StudioSettings, type Service, type Work, type Course, type Publication } from './data'
+import { catalog as publishedCatalog } from './catalog'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 export const db = url && key ? createClient(url, key, {auth:{flowType:'pkce'}}) : null
+let invitation:Promise<boolean>|undefined
+function acceptInvitation(){
+  const fields=new URLSearchParams(location.search)
+  const token=fields.get('token_hash')
+  if(db&&fields.get('type')==='invite'&&token&&/^[a-zA-Z0-9_.-]{20,280}$/.test(token)){
+    fields.delete('token_hash')
+    fields.delete('type')
+    history.replaceState(null,'',location.pathname+(fields.size?'?'+fields:'')+location.hash)
+    invitation=db.auth.verifyOtp({type:'invite',token_hash:token}).then(({data,error})=>!error&&Boolean(data.session))
+  }
+  return invitation
+}
 
 export function database() {
   if (!db) throw new Error('O serviço online ainda está em configuração.')
@@ -30,7 +43,7 @@ const Studio = createContext<{
   session:Session|null; profile:Profile|null; admin:boolean; loading:boolean; settings:StudioSettings;
   services:Service[]; courses:Course[]; works:Work[]; news:Publication[]; refresh:()=>Promise<void>;
   publicError:string; authEvent:string; clearAuthEvent:()=>void;
-}>({session:null,profile:null,admin:false,loading:true,settings:defaults,services:[],courses:[],works:localWorks,news:[],refresh:async()=>{},publicError:'',authEvent:'',clearAuthEvent:()=>{}})
+}>({session:null,profile:null,admin:false,loading:true,settings:defaults,services:publishedCatalog,courses:[],works:localWorks,news:[],refresh:async()=>{},publicError:'',authEvent:'',clearAuthEvent:()=>{}})
 
 export const useStudio = () => useContext(Studio)
 export function StudioProvider({children}:{children:ReactNode}) {
@@ -39,7 +52,7 @@ export function StudioProvider({children}:{children:ReactNode}) {
   const [admin,setAdmin] = useState(false)
   const [loading,setLoading] = useState(Boolean(db))
   const [settings,setSettings] = useState(defaults)
-  const [services,setServices] = useState<Service[]>([])
+  const [services,setServices] = useState<Service[]>(publishedCatalog)
   const [courses,setCourses] = useState<Course[]>([])
   const [works,setWorks] = useState<Work[]>(localWorks)
   const [news,setNews] = useState<Publication[]>([])
@@ -86,6 +99,8 @@ export function StudioProvider({children}:{children:ReactNode}) {
       if (event === 'PASSWORD_RECOVERY') setAuthEvent(event)
     })
     void db.auth.getSession().catch(()=>setLoading(false))
+    const pending=acceptInvitation()
+    if(pending)void pending.then(ok=>setAuthEvent(ok?'ADMIN_INVITE':'INVITE_INVALID')).catch(()=>setAuthEvent('INVITE_INVALID'))
     void refreshPublic()
     return () => data.subscription.unsubscribe()
   },[])

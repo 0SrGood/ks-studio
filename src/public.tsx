@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CalendarDays, Clock3, Camera as Instagram, MapPin, ScanLine, Star, ArrowUpRight, GraduationCap } from 'lucide-react'
-import { address, coursePost, currency, dayLabel, errorText, instagram, localDay, maps, media, time, addDays, type Cohort, type Service, type Slot, type Work } from './data'
+import { address, appHref, coursePost, currency, dayLabel, errorText, instagram, isBookable, maps, media, time, type Cohort, type Service, type Work } from './data'
 import { db, invoke, rpc, useStudio } from './studio'
 import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
 
@@ -13,13 +13,6 @@ const specialties = [
 
 export function HomePage() {
   const {settings,services,works,news,publicError}=useStudio()
-  const [slots,setSlots]=useState<Slot[]>([])
-  const featured=services[0]?.id
-  useEffect(()=>{
-    let active=true
-    if(featured) void rpc<Slot[]>('availability',{p_service:featured,p_from:localDay(),p_to:addDays(localDay(),6)}).then(data=>{if(active)setSlots(data.slice(0,3))}).catch(()=>{if(active)setSlots([])})
-    return ()=>{active=false}
-  },[featured])
   const headline = settings.headline === 'Beleza que valoriza sua essência.' ? <>Beleza que<br/> valoriza sua <em>essência.</em></> : settings.headline
   return <>
     <section className="hero" aria-labelledby="hero-title">
@@ -27,7 +20,7 @@ export function HomePage() {
         <span className="eyebrow"><span className="rule"/> JOÃO CÂMARA, RN</span>
         <h1 id="hero-title">{headline}</h1>
         <p>Design de sobrancelhas e micropigmentação com um olhar atento à beleza de cada mulher.</p>
-        <div className="hero-actions"><Action to="/agendar"><CalendarDays size={17}/> Agendar meu horário</Action><Action to="/procedimentos" kind="outline">Ver procedimentos</Action></div>
+        <div className="hero-actions"><Action href={appHref('/agendar')}><CalendarDays size={17}/> Agendar meu horário</Action><Action href={appHref('/procedimentos')} kind="outline">Ver procedimentos</Action></div>
       </div>
       <figure className="hero-photo"><picture><source media="(max-width: 600px)" srcSet={media('hero-mobile.webp')}/><img fetchPriority="high" src={media('hero.webp')} alt="Karyna Santos com o uniforme do Studio"/></picture>
         <figcaption><span>Karyna Santos</span><small>DESIGNER E MICROPIGMENTADORA</small></figcaption></figure>
@@ -42,9 +35,8 @@ export function HomePage() {
       <WorkGallery items={works.slice(0,3)}/>
     </section>
     <section className="section about wrap"><img loading="lazy" src={media('about.webp')} alt="Retrato de Karyna Santos"/><div><span className="eyebrow">QUEM ESTÁ POR TRÁS DO STUDIO</span><h2>Conheça<br/><em>Karyna Santos.</em></h2><p>{settings.bio}</p><div className="inline-actions"><TextLink to="/sobre">Conhecer minha trajetória</TextLink><a className="text-link" href={instagram} target="_blank" rel="noreferrer"><Instagram size={16}/> Instagram <ArrowUpRight size={15}/></a></div></div></section>
-    <section className="wrap section"><header className="section-title"><div><span className="eyebrow">CATÁLOGO</span><h2>Cuidados do Studio</h2></div><TextLink to="/procedimentos">Ver todos</TextLink></header>
-      {services.length ? <div className="editorial-grid">{services.slice(0,3).map(service=><ServiceCard key={service.id} service={service}/>)}</div> : <Empty title="Catálogo em preparação">Os procedimentos, valores e durações serão divulgados pelo Studio.</Empty>}
-      {slots.length>0&&<div className="quick-slots"><h3>Próximos horários para {services[0].name}</h3>{slots.map(slot=><Link key={slot.starts_at} to={'/agendar?servico='+featured+'&dia='+slot.day+'&horario='+encodeURIComponent(slot.starts_at)}>{dayLabel(slot.day)} · {time(slot.starts_at)}</Link>)}</div>}
+    <section className="wrap section"><header className="section-title"><div><span className="eyebrow">CATÁLOGO</span><h2>Cuidados do Studio</h2></div><a className="text-link" href={appHref('/procedimentos')}>Ver todos no app</a></header>
+      {services.length ? <div className="editorial-grid">{services.slice(0,3).map(service=><article className="service-card" key={service.id}><h3><a href={appHref('/procedimentos/'+service.id)}>{service.name}</a></h3><p>{service.description}</p></article>)}</div> : <Empty title="Catálogo em preparação">Os procedimentos, valores e durações serão divulgados pelo Studio.</Empty>}
       <Notice message={publicError}/>
     </section>
     <section className="course-feature"><div className="wrap"><div><span className="eyebrow">FORMAÇÃO PROFISSIONAL</span><h2>Aprenda com<br/><em>Karyna Santos.</em></h2><p>Conhecimento, técnica e experiência compartilhados com quem deseja crescer na área da beleza.</p><Action to="/cursos">Conhecer os cursos</Action></div><img loading="lazy" src={media('courses.webp')} alt="Karyna Santos com instrumentos de design de sobrancelhas"/></div></section>
@@ -55,8 +47,12 @@ export function HomePage() {
 function ServiceCard({service}:{service:Service}) {
   return <article className="service-card">{service.photo&&<Link to={'/procedimentos/'+service.id}><img loading="lazy" src={service.photo} alt={service.name}/></Link>}
     <span className="eyebrow">{service.category}</span><h3><Link to={'/procedimentos/'+service.id}>{service.name}</Link></h3><p>{service.description}</p>
-    <div className="metadata"><strong>{currency(service.price_cents)}</strong><span><Clock3 size={15}/>{service.duration} min</span></div>
-    <Action to={'/agendar?servico='+service.id} kind="outline">Agendar</Action></article>
+    <ServiceInfo service={service}/>
+    {isBookable(service)?<Action to={'/agendar?servico='+service.id} kind="outline">Agendar</Action>:<TextLink to={'/procedimentos/'+service.id}>Ver detalhes</TextLink>}</article>
+}
+function ServiceInfo({service}:{service:Service}){
+  return <div className="metadata">{service.price_cents!==null&&<strong>{currency(service.price_cents)}</strong>}{service.duration!==null&&<span><Clock3 size={15}/>{service.duration} min</span>}
+    {!isBookable(service)&&<span>Agenda a confirmar</span>}</div>
 }
 export function Catalog() {
   const {services,publicError}=useStudio()
@@ -83,8 +79,8 @@ export function Procedure() {
   }
   return <div className="wrap page"><TextLink to="/procedimentos">Todos os procedimentos</TextLink><Intro label={service.category} title={service.name} description={service.description}/>
     <div className="detail-grid"><div>{service.photo&&<img className="detail-photo" src={service.photo} alt={service.name}/>}
-    <div className="metadata"><strong>{currency(service.price_cents)}</strong><span><Clock3 size={17}/>{service.duration} min</span></div>
-    <div className="inline-actions"><Action to={'/agendar?servico='+service.id}>Agendar procedimento</Action>{session&&<Action kind="outline" onClick={save}>Favorito</Action>}</div><Notice message={status} success/></div>
+    <ServiceInfo service={service}/>
+    <div className="inline-actions">{isBookable(service)&&<Action to={'/agendar?servico='+service.id}>Agendar procedimento</Action>}{session&&<Action kind="outline" onClick={save}>Favorito</Action>}</div><Notice message={status} success/></div>
     <div>{details.filter(([,body])=>body).map(([title,body])=><section className="detail-note" key={title}><h3>{title}</h3><p>{body}</p></section>)}</div></div>
     {works.some(work=>work.service_id===id)&&<section className="section"><h2>Resultados</h2><WorkGallery items={works.filter(work=>work.service_id===id)}/></section>}</div>
 }
@@ -101,7 +97,7 @@ function WorkGallery({items}:{items:Work[]}) {
       {work.before_url&&<span className="comparison-line" style={{left:compare+'%'}} aria-hidden="true"/>}</div>}
       {work.before_url&&<label className="field">Comparar antes e depois<input type="range" min="0" max="100" value={compare} onChange={event=>setCompare(+event.target.value)}/></label>}
       <p>{work.description}</p>{work.video_url&&<video controls preload="metadata" src={work.video_url}/>}
-      <div className="inline-actions">{work.instagram_url&&<a className="text-link" href={work.instagram_url} target="_blank" rel="noreferrer">Publicação original</a>}{work.service_id&&<Action to={'/agendar?servico='+work.service_id} onClick={()=>setWork(null)}>Agendar</Action>}</div>
+      <div className="inline-actions">{work.instagram_url&&<a className="text-link" href={work.instagram_url} target="_blank" rel="noreferrer">Publicação original</a>}{work.service_id&&<Action href={appHref('/agendar?servico='+work.service_id)}>Agendar</Action>}</div>
     </Dialog>}</>
 }
 export function Portfolio() {

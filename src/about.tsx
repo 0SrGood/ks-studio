@@ -1,6 +1,6 @@
 import { ArrowUpRight, Camera } from 'lucide-react'
 import { Action, Intro, TextLink } from './ui'
-import { instagram, media } from './data'
+import { appHref, instagram, media } from './data'
 import { useStudio } from './studio'
 
 export default function About() {
@@ -8,7 +8,7 @@ export default function About() {
   return <article className="wrap page about-page">
     <section className="course-intro">
       <div><Intro label="A PROFISSIONAL" title="Conheça Karyna Santos" description="Designer de sobrancelhas, micropigmentadora e instrutora em João Câmara, RN."/>
-        <div className="inline-actions"><Action to="/portfolio">Conhecer meu trabalho</Action><TextLink to="/agendar">Agendar um horário</TextLink></div>
+        <div className="inline-actions"><Action to="/portfolio">Conhecer meu trabalho</Action><a className="text-link" href={appHref('/agendar')}>Agendar um horário</a></div>
       </div>
       <img src={media('hero.webp')} alt="Retrato de Karyna Santos com o uniforme do Studio"/>
     </section>

@@ -8,10 +8,10 @@ export function Brand({full=false}:{full?:boolean}) {
   <span className="brand"><img src={media('monogram.webp')} width="44" height="40" alt=""/><span>Karyna Santos<small>STUDIO DE BELEZA</small></span></span>
 }
 
-export function Action({to,children,kind='ornate',className='',...props}:ButtonHTMLAttributes<HTMLButtonElement> & {to?:string;children:ReactNode;kind?:'ornate'|'outline'|'quiet'}) {
+export function Action({to,href,children,kind='ornate',className='',...props}:ButtonHTMLAttributes<HTMLButtonElement> & {to?:string;href?:string;children:ReactNode;kind?:'ornate'|'outline'|'quiet'}) {
   const cls = 'action action--' + kind + ' ' + className
   const body = <><span className="action-decoration" aria-hidden="true"/><span className="action-label">{children}</span></>
-  return to ? <Link to={to} className={cls}>{body}</Link> : <button type="button" {...props} className={cls}>{body}</button>
+  return href ? <a href={href} className={cls}>{body}</a> : to ? <Link to={to} className={cls}>{body}</Link> : <button type="button" {...props} className={cls}>{body}</button>
 }
 
 export function TextLink({to,children}:{to:string;children:ReactNode}) {

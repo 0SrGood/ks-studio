@@ -17,7 +17,7 @@ export function SignIn({forceLogin=false}:{forceLogin?:boolean}) {
   const {authEvent,session,clearAuthEvent}=useStudio()
   const [standaloneMode,setMode]=useState<AuthMode>('login')
   const [recovered,setRecovered]=useState(false)
-  const mode=authEvent==='PASSWORD_RECOVERY'&&!recovered?'recover':standaloneMode
+  const mode=(authEvent==='PASSWORD_RECOVERY'||authEvent==='ADMIN_INVITE')&&!recovered?'recover':standaloneMode
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState(initial)
   const [captchaToken,setCaptchaToken]=useState('')
@@ -46,6 +46,7 @@ export function SignIn({forceLogin=false}:{forceLogin?:boolean}) {
   }
   const labels={login:'Entrar',signup:'Criar conta',reset:'Enviar link de recuperação',recover:'Salvar nova senha'}
   return <section className="signin"><Brand full/><h2>{mode==='signup'?'Crie sua conta':mode==='reset'?'Recuperar senha':mode==='recover'?'Escolha sua nova senha':'Acesse sua conta'}</h2>
+  {authEvent==='INVITE_INVALID'&&<Notice message="O convite expirou ou já foi usado. Entre com seu e-mail ou solicite a recuperação de senha."/>}
   <p>{forceLogin?'Entre com a conta administrativa do Studio.':'Use sua conta para acompanhar seu histórico em outros dispositivos.'}</p>
   {!db?<Notice message="O acesso à conta ainda está em configuração."/>:<>
     <form className="stack" onSubmit={submit}>
@@ -74,7 +75,7 @@ export default function Account({journey=false}:{journey?:boolean}) {
   const tab=params.get('secao')||'agenda'
   const setTab=(tab:string)=>setParams({secao:tab})
   return <div className="wrap page account-page"><Intro label="ÁREA DA CLIENTE" title={journey?'Minha Jornada':profile?.name?'Olá, '+profile.name.trim().split(' ')[0]:'Meu perfil'} description={journey?'Acompanhe suas visitas, seus cuidados e as conquistas no Studio.':'Gerencie seus atendimentos e suas preferências.'}/>
-    {!session||authEvent==='PASSWORD_RECOVERY'?<SignIn/>:journey?<Journey customer={session.user.id}/>:<>
+    {!session||['PASSWORD_RECOVERY','ADMIN_INVITE','INVITE_INVALID'].includes(authEvent)?<SignIn/>:journey?<Journey customer={session.user.id}/>:<>
     {next&&<div className="next-visit"><CalendarDays size={25}/><div><span className="eyebrow">PRÓXIMO ATENDIMENTO</span><h3>{next.service_name}</h3><p>{dayLabel(next.starts_at)} · {time(next.starts_at)} · {settings.address}</p></div></div>}
     <nav className="chips" aria-label="Seções do perfil">{[['agenda','Agendamentos'],['notificacoes','Notificações'],['dados','Meus dados'],['favoritos','Favoritos']].map(([id,label])=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     {tab==='agenda'&&<><BookingList/><div className="inline-actions"><TextLink to="/pagamentos">Pagamentos</TextLink><TextLink to="/minha-jornada">Minha Jornada</TextLink>{admin&&<TextLink to="/admin">Administração</TextLink>}</div></>}

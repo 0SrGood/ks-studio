@@ -1,60 +1,63 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { CalendarDays, Home, Camera as Instagram, MapPin, Sparkles, UserRound, BookOpen, Menu } from 'lucide-react'
-import { HomePage, Catalog, Procedure, Portfolio, Courses, CourseDetail, Legal } from './public'
+import { BookOpen, CalendarDays, House, Settings2, Sparkles, UserRound } from 'lucide-react'
+import { Catalog, Procedure, Courses, CourseDetail, Legal } from './public'
 import { Action, Brand } from './ui'
 import { useStudio } from './studio'
-import { instagram, maps } from './data'
-import About from './about'
+import { AppHome } from './app-home'
+import './app-shell.css'
 
 const Booking = lazy(()=>import('./booking'))
 const Account = lazy(()=>import('./account'))
 const Admin = lazy(()=>import('./admin'))
+const studioURL = new URL('studio.html',new URL(import.meta.env.BASE_URL,location.href))
 
 const tabs = [
-  ['/', 'Início', Home],
-  ['/procedimentos','Procedimentos', Sparkles],
+  ['/', 'Início', House],
   ['/agendar','Agendar', CalendarDays],
-  ['/minha-jornada','Minha Jornada', BookOpen],
+  ['/procedimentos','Procedimentos', Sparkles],
+  ['/minha-jornada','Histórico', BookOpen],
   ['/perfil','Perfil', UserRound],
 ] as const
+
+function StudioRedirect({path=''}:{path?:string}) {
+  const target=studioURL.href+'#/'+path
+  useEffect(()=>{window.location.replace(target)},[target])
+  return <div className="wrap page"><a href={target}>Abrir apresentação do Studio</a></div>
+}
 export function App() {
   const {pathname} = useLocation()
-  const {session,admin,settings,authEvent} = useStudio()
+  const {admin,authEvent} = useStudio()
   const navigate=useNavigate()
   const management=pathname.startsWith('/admin')
   useEffect(()=>{window.scrollTo(0,0)},[pathname])
-  useEffect(()=>{if(authEvent==='PASSWORD_RECOVERY')navigate('/perfil',{replace:true})},[authEvent,navigate])
+  useEffect(()=>{
+    if(['PASSWORD_RECOVERY','ADMIN_INVITE','INVITE_INVALID'].includes(authEvent)&&pathname!=='/perfil')navigate('/perfil',{replace:true})
+  },[authEvent,navigate,pathname])
   useEffect(()=>{
     const referral=new URLSearchParams(location.hash.split('?')[1]).get('indicacao')
     if(referral&&/^[a-f0-9]{32}$/.test(referral))localStorage.setItem('studio-referral',referral)
   },[])
-  return <>
+  return <div className={'app-shell'+(management?' is-management':'')}>
     <a className="skip" href="#main" onClick={event=>{event.preventDefault();document.getElementById('main')?.focus()}}>Pular para o conteúdo</a>
-    <header className="top"><div className="top-inner">
+    <header className="top app-top"><div className="top-inner">
       <Link to="/" className="home-brand" aria-label="Studio Karyna Santos, início"><Brand/></Link>
-      <nav className="desktop-nav" aria-label="Navegação principal">
-        <NavLink end to="/">Início</NavLink><NavLink to="/sobre">Sobre</NavLink><NavLink to="/procedimentos">Procedimentos</NavLink><NavLink to="/portfolio">Portfólio</NavLink><NavLink to="/cursos">Cursos</NavLink>
-      </nav>
+      {!management&&<nav className="desktop-nav" aria-label="Navegação do aplicativo">
+        <NavLink end to="/">Início</NavLink><NavLink to="/agendar">Agendar</NavLink><NavLink to="/procedimentos">Procedimentos</NavLink><NavLink to="/minha-jornada">Histórico</NavLink>
+      </nav>}
       <div className="header-actions">
-        {admin&&<Link className="header-account" to="/admin">Administração</Link>}
-        <Link className="header-account" to="/perfil"><UserRound size={17}/>{session?'Meu perfil':'Entrar'}</Link>
-        <Action className="header-book" to="/agendar" kind="outline">Agendar</Action>
-        <details className="mobile-menu"><summary aria-label="Abrir menu"><Menu size={24}/></summary><nav>
-          <Link to="/sobre" onClick={e=>e.currentTarget.closest('details')?.removeAttribute('open')}>Sobre a Karyna</Link>
-          <Link to="/cursos" onClick={e=>e.currentTarget.closest('details')?.removeAttribute('open')}>Cursos</Link>
-          <Link to="/portfolio" onClick={e=>e.currentTarget.closest('details')?.removeAttribute('open')}>Portfólio</Link>
-          {admin&&<Link to="/admin" onClick={e=>e.currentTarget.closest('details')?.removeAttribute('open')}>Administração</Link>}
-        </nav></details>
+        {!management&&<Link to="/perfil" className="app-header-link"><UserRound size={18}/><span>Perfil</span></Link>}
+        {management?<Link className="app-header-link" to="/">Voltar ao app</Link>:<Link aria-label="Administração" title="Administração" className="app-header-link" to="/admin"><Settings2 size={18}/>{admin&&<span>Administração</span>}</Link>}
       </div>
     </div></header>
     <main id="main" tabIndex={-1}>
       <Suspense fallback={<p className="wrap loading" role="status">Carregando…</p>}>
         <Routes>
-          <Route path="/" element={<HomePage/>}/>
-          <Route path="/sobre" element={<About/>}/>
+          <Route path="/" element={<AppHome/>}/>
+          <Route path="/sobre" element={<StudioRedirect path="sobre"/>}/>
+          <Route path="/portfolio" element={<StudioRedirect path="portfolio"/>}/>
           <Route path="/procedimentos" element={<Catalog/>}/><Route path="/procedimentos/:id" element={<Procedure/>}/>
-          <Route path="/portfolio" element={<Portfolio/>}/><Route path="/cursos" element={<Courses/>}/><Route path="/cursos/:id" element={<CourseDetail/>}/>
+          <Route path="/cursos" element={<Courses/>}/><Route path="/cursos/:id" element={<CourseDetail/>}/>
           <Route path="/agendar" element={<Booking/>}/><Route path="/pagamentos" element={<Booking/>}/>
           <Route path="/perfil" element={<Account/>}/><Route path="/minha-jornada" element={<Account journey/>}/>
           <Route path="/privacidade" element={<Legal privacy/>}/><Route path="/termos" element={<Legal/>}/>
@@ -63,12 +66,7 @@ export function App() {
         </Routes>
       </Suspense>
     </main>
-    {!management&&<footer><div className="wrap footer-grid"><div><Brand full/></div><section><h2>Visite o Studio</h2>
-      <a href={maps} target="_blank" rel="noreferrer"><MapPin size={17}/>{settings.address}</a><p>{settings.hours_text}</p>
-    </section><section><h2>Encontre a Karyna</h2><a href={instagram} target="_blank" rel="noreferrer"><Instagram size={17}/>Instagram</a>
-      {settings.contact_validated&&settings.whatsapp&&<a href={'https://wa.me/'+settings.whatsapp.replace(/\D/g,'')} target="_blank" rel="noreferrer">WhatsApp</a>}
-      <Link to="/cursos">Cursos</Link></section></div>
-      <div className="wrap footer-bottom"><span>© {new Date().getFullYear()} Studio Karyna Santos</span><Link to="/privacidade">Privacidade</Link><Link to="/termos">Termos de uso</Link></div></footer>}
-    {!management&&<nav className="mobile-tabs" aria-label="Atalhos">{tabs.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}</nav>}
-  </>
+    {!management&&<nav className="mobile-tabs" aria-label="Navegação do aplicativo">{tabs.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}</nav>}
+  </div>
 }
+

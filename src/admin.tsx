@@ -1,4 +1,5 @@
 import { Clients, Finance, Services, PortfolioEditor, CourseEditor, Campaigns, Badges, Reports, Settings } from './admin-screens'
+import { MonthlyFinance } from './monthly-finance'
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Action, Dialog, Empty, Intro, Notice, TextLink } from './ui'
@@ -7,7 +8,7 @@ import { db, database, rpc, invoke, useStudio } from './studio'
 import { appointmentStatus, addDays, currency, dayLabel, errorText, localDay, paymentStatus, time, type Booking, type Slot } from './data'
 import { dateRange, EditFields, f, getRows, intervalLabel, mediaFile, TableEditor, upsert, useRows, type Row, type Option } from './admin-fields'
 
-const screens=[['','Hoje'],['agenda','Agenda e Programações'],['clientes','Clientes'],['pagamentos','Pagamentos'],['procedimentos','Catálogo'],['portfolio','Portfólio'],['cursos','Cursos'],['campanhas','Campanhas'],['selos','Selos'],['relatorios','Relatórios'],['configuracoes','Configurações']]
+const screens=[['','Hoje'],['agenda','Agenda'],['clientes','Clientes'],['financeiro','Financeiro'],['pagamentos','Pagamentos'],['procedimentos','Catálogo'],['portfolio','Portfólio'],['cursos','Cursos'],['campanhas','Campanhas'],['selos','Selos'],['relatorios','Relatórios'],['configuracoes','Configurações']]
 const phoneLabel=(number:string)=>number?.replace(/^55(\d{2})(\d+)(\d{4})$/,'($1) $2-$3')
 export default function Admin() {
   const {pathname}=useLocation(),{session,admin,loading}=useStudio()
@@ -17,7 +18,7 @@ export default function Admin() {
   if(!admin)return <div className="wrap page"><Intro label="STUDIO KARYNA SANTOS" title="Administração"/><Empty title="Acesso restrito"><TextLink to="/perfil">Voltar ao perfil</TextLink></Empty></div>
   return <div className="wrap page admin-page"><Intro label="GESTÃO DO STUDIO" title={screens.find(([id])=>id===screen)?.[1]||'Administração'}/>
     <div className="admin-layout"><nav className="admin-nav" aria-label="Menu administrativo">{screens.map(([id,label])=><NavLink end={!id} to={'/admin'+(id?'/'+id:'')} key={id}>{label}</NavLink>)}</nav>
-      <div className="admin-body">{screen===''?<Agenda today/>:screen==='agenda'?<Agenda/>:screen==='clientes'?<Clients/>:screen==='pagamentos'?<Finance/>:
+      <div className="admin-body">{screen===''?<><Agenda today/><MonthlyFinance summary/></>:screen==='agenda'?<Agenda/>:screen==='clientes'?<Clients/>:screen==='financeiro'?<MonthlyFinance/>:screen==='pagamentos'?<Finance/>:
         screen==='procedimentos'?<Services/>:screen==='portfolio'?<PortfolioEditor/>:screen==='cursos'?<CourseEditor/>:screen==='campanhas'?<Campaigns/>:
         screen==='selos'?<Badges/>:screen==='relatorios'?<Reports/>:screen==='configuracoes'?<Settings/>:<Empty title="Área não encontrada"/>}</div></div></div>
 }
@@ -42,7 +43,7 @@ function Agenda({today=false}:{today?:boolean}) {
   const {rows:people}=useRows('profiles','name'),{rows:services}=useRows('services','position')
   const [available,setAvailable]=useState<Slot[]>([]),[service,setService]=useState('')
   useEffect(()=>{
-    const id=service||services.find(s=>s.active)?.id
+    const id=service||services.find(s=>s.active&&s.booking_enabled)?.id
     if(today&&id)void rpc<Slot[]>('availability',{p_service:id,p_from:day,p_to:day}).then(setAvailable).catch(()=>setAvailable([]))
   },[services,service,day,items,today])
   const [open,setOpen]=useState('agenda')
@@ -51,7 +52,7 @@ function Agenda({today=false}:{today?:boolean}) {
   return <>{!today&&<div className="chips">{[['agenda','Agenda'],['horarios','Horários de funcionamento'],['bloqueios','Bloqueios']].map(([id,name])=><button key={id} type="button" aria-pressed={open===id} onClick={()=>setOpen(id)}>{name}</button>)}</div>}
   {open==='agenda'?<><header className="section-title"><h2>{dayLabel(day)}</h2><Action onClick={()=>setManual(true)}>Agendamento manual</Action></header>
     {today?<><dl className="metrics">{summary.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>{next&&<p>Próxima cliente · {time(next.starts_at)} · {people.find(person=>person.id===next.customer_id)?.name || 'Cliente'} · {next.service_name}</p>}
-      {services.some(s=>s.active)&&<div className="detail-note"><label className="field filter">Horários livres por procedimento<select value={service||services.find(s=>s.active)?.id||''} onChange={e=>setService(e.target.value)}>{services.filter(s=>s.active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><p>{available.map(s=>time(s.starts_at)).join(' · ')||'Sem horários livres neste dia.'}</p></div>}</>:
+      {services.some(s=>s.active&&s.booking_enabled)&&<div className="detail-note"><label className="field filter">Horários livres por procedimento<select value={service||services.find(s=>s.active&&s.booking_enabled)?.id||''} onChange={e=>setService(e.target.value)}>{services.filter(s=>s.active&&s.booking_enabled).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><p>{available.map(s=>time(s.starts_at)).join(' · ')||'Sem horários livres neste dia.'}</p></div>}</>:
     <div className="inline-actions"><label className="field">Data<input type="date" value={day} onChange={e=>{if(e.target.value)setDay(e.target.value)}}/></label><div className="chips">{([['day','Dia'],['week','Semana'],['month','Mês']] as const).map(([id,label])=><button key={id} type="button" aria-pressed={mode===id} onClick={()=>setMode(id)}>{label}</button>)}</div></div>}
     {mode!=='day'&&<div className={mode==='month'?'admin-month':'admin-week'}>{Array.from({length:dayCount},(_,i)=>addDays(from,i)).map(d=><button key={d} aria-pressed={d===day} onClick={()=>setDay(d)}><strong>{d.slice(-2)}</strong><small>{items.filter(b=>localDay(new Date(b.starts_at))===d).length} atend.</small></button>)}</div>}
     <section className="admin-section"><h3>Linha do tempo</h3>{items.some(b=>localDay(new Date(b.starts_at))===day)?items.filter(b=>localDay(new Date(b.starts_at))===day).map(b=><div className="data-row" key={b.id}><div><strong>{time(b.starts_at)} · {b.service_name}</strong><p>{people.find(p=>p.id===b.customer_id)?.name} · {appointmentStatus[b.status]}</p></div><Action kind="outline" onClick={()=>setEvent(b)}>Detalhes</Action></div>):<Empty title="Nenhum atendimento para esta data"/>}</section>
@@ -84,7 +85,7 @@ function ManualBooking({people,services,close}:{people:Row[];services:Row[];clos
   const [date,setDate]=useState(localDay()),[service,setService]=useState(''),[method,setMethod]=useState(''),[customer,setCustomer]=useState(''),[times,setTimes]=useState<Slot[]>([]),[error,setError]=useState('')
   useEffect(()=>{setTimes([]);if(date&&service)void rpc<Slot[]>('availability',{p_service:service,p_from:date,p_to:date}).then(setTimes).catch(e=>setError(errorText(e)))},[service,date])
   return <div className="stack"><label className="field">Cliente<select value={customer} onChange={e=>setCustomer(e.target.value)}><option value="">Selecione</option>{people.filter(p=>p.phone&&p.name).map(p=><option key={p.id} value={p.id}>{p.name} · {phoneLabel(p.phone)}</option>)}</select></label>
-  <label className="field">Procedimento<select value={service} onChange={e=>{setService(e.target.value);setMethod('')}}><option value="">Selecione</option>{services.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+  <label className="field">Procedimento<select value={service} onChange={e=>{setService(e.target.value);setMethod('')}}><option value="">Selecione</option>{services.filter(s=>s.booking_enabled).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
   <label className="field">Data<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
   <label className="field">Forma de pagamento<select value={method} onChange={e=>setMethod(e.target.value)}><option value="">Selecione</option>{services.find(s=>s.id===service)?.onsite&&<option value="onsite">Pagamento presencial</option>}</select></label>
   {times.length&&method&&customer?<EditFields label="Confirmar reserva" fields={[f('start','Horário','select',{required:true,options:times.map(t=>[t.starts_at,time(t.starts_at)])})]} submit={async values=>{

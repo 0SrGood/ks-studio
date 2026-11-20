@@ -23,6 +23,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const request = event.request;
   if (request.mode === 'navigate' && request.url.startsWith(scope)) {
+    if (new URL(request.url).pathname === new URL('studio.html', scope).pathname) return;
     event.respondWith(fetch(request).catch(() => caches.open(cacheName).then(cache => cache.match(new URL('index.html', scope)))));
     return;
   }

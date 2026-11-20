@@ -15,6 +15,10 @@ node scripts/verify-build.mjs
 
 A prévia pública funciona antes da conexão com o Supabase. Catálogo, agenda e áreas privadas ficam disponíveis à medida que o backend e os dados reais do Studio são configurados.
 
+- `/#/` abre o aplicativo de agendamento, histórico e pagamentos.
+- `/studio.html#/` abre a apresentação pública com biografia, portfólio, cursos e contato. Este é o endereço para a bio do Instagram.
+- `/#/admin` abre a área autenticada da proprietária, com agenda, clientes, pagamentos e resultado mensal.
+
 ## GitHub Pages
 
 O workflow publica a pasta `dist` a partir de `main`. Configure o GitHub Actions como fonte no Pages. Para conectar o frontend, defina as variáveis de repositório `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Use `VITE_GOOGLE_SIGN_IN=true` após habilitar Google no Supabase Auth. Use `VITE_PUSH_PUBLIC_KEY` somente quando houver serviço de entrega ativo. O frontend usa rotas com hash, inclusive na subpasta do Pages.

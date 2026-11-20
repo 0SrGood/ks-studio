@@ -122,12 +122,13 @@ export function Services() {
   return <><TableEditor table="categories" sort="name" pk="name" title="Categorias" create="Nova categoria" fields={[f('name','Nome','text',{required:true})]} onSaved={reload}/>
     <TableEditor table="services" sort="position" title="Procedimentos" create="Novo procedimento" fields={[
       f('name','Nome','text',{required:true}),f('category','Categoria','select',{options:categories.map(c=>[c.name,c.name]),required:true}),
-      f('description','Descrição','textarea'),f('price_cents','Valor em centavos','number',{required:true,min:1}),f('duration','Duração em minutos','number',{required:true,min:5,max:720}),
+      f('description','Descrição','textarea'),f('price_cents','Valor em centavos','number',{nullable:true,min:1}),f('duration','Duração em minutos','number',{nullable:true,min:5,max:720}),
       f('buffer','Pausa após atendimento (minutos)','number',{value:0,min:0,max:180}),f('photo','Fotografia','photo'),
       f('preparation','Preparação','textarea'),f('aftercare','Cuidados posteriores','textarea'),f('restrictions','Observações e contraindicações','textarea'),
       f('return_rules','Regras de retorno','textarea'),f('return_days','Lembrete de retorno em dias','number',{min:1,nullable:true}),f('payment_conditions','Condições de pagamento','textarea'),
-      f('position','Ordem no catálogo','number',{value:0}),f('active','Publicar no catálogo','checkbox'),f('onsite','Aceitar pagamento presencial','checkbox',{value:true}),f('pix','Aceitar Pix','checkbox'),
-    ]} render={r=><><strong>{r.name}</strong><p>{currency(r.price_cents)} · {r.duration} min · {r.active?'Publicado':'Oculto'}</p></>} onSaved={()=>void refresh()}/></>
+      f('position','Ordem no catálogo','number',{value:0}),f('active','Publicar no catálogo','checkbox'),f('booking_enabled','Liberar agendamento (preço e duração obrigatórios)','checkbox'),
+      f('onsite','Aceitar pagamento presencial','checkbox',{value:true}),f('pix','Aceitar Pix','checkbox'),
+    ]} render={r=><><strong>{r.name}</strong><p>{r.price_cents===null?'Preço a confirmar':currency(r.price_cents)} · {r.duration===null?'Duração a confirmar':r.duration+' min'} · {r.active?'Publicado':'Oculto'} · {r.booking_enabled?'Agenda liberada':'Agenda fechada'}</p></>} onSaved={()=>void refresh()}/></>
 }
 export function PortfolioEditor() {
   const {refresh}=useStudio(),{rows:services}=useRows('services','name')

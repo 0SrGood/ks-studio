@@ -20,7 +20,10 @@ export const appointmentStatus: Record<string,string> = {
 export const paymentStatus: Record<string,string> = {
   waiting:'Aguardando comprovante', received:'Comprovante recebido', processing:'Em análise', bank_review:'Aguardando conferência bancária', manual_review:'Revisão necessária', paid:'Pagamento confirmado', rejected:'Não confirmado', onsite_pending:'Pagamento presencial pendente', expired:'Prazo encerrado',
 }
-export type Service = { id:string; name:string; category:string; description:string; price_cents:number; duration:number; buffer:number; photo:string|null; active:boolean; position:number; pix:boolean; onsite:boolean; preparation:string; aftercare:string; restrictions:string; return_days:number|null; return_rules:string; payment_conditions:string }
+export type Service = { id:string; name:string; category:string; description:string; price_cents:number|null; duration:number|null; buffer:number; photo:string|null; active:boolean; booking_enabled?:boolean; position:number; pix:boolean; onsite:boolean; preparation:string; aftercare:string; restrictions:string; return_days:number|null; return_rules:string; payment_conditions:string }
+export const isBookable = (service:Service):service is Service & {price_cents:number;duration:number} =>
+  service.booking_enabled!==false && service.active && service.price_cents!==null && service.duration!==null
+export const appHref = (path:string) => new URL(import.meta.env.BASE_URL,location.href).href+'#'+path
 export type StudioSettings = { headline:string; bio:string; address:string; hours_text:string; contact_validated:boolean; whatsapp:string; google_url:string; cancellation_hours:number; reschedule_hours:number; booking_days:number; min_notice:number; hold_review_hours:number; terms:string; privacy:string; referral_benefit:string }
 export const defaults: StudioSettings = {
   headline:'Beleza que valoriza sua essência.',
