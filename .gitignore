@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env*
+!.env.example
+playwright-report/
+test-results/
+supabase/.temp/
+supabase/.branches/
+public/media/gallery-*.webp
+/supabase/
+/worker/
+/OPERACAO.md
+/tests/backend.test.mjs
+

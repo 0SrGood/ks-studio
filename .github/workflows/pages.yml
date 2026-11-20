@@ -1,0 +1,57 @@
+name: Publicar Studio no GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: studio-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_GOOGLE_SIGN_IN: ${{ vars.VITE_GOOGLE_SIGN_IN }}
+      VITE_PUSH_PUBLIC_KEY: ${{ vars.VITE_PUSH_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/verify-build.mjs
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
+      - name: Verificar URL e manifesto
+        env:
+          PAGES_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/" | grep -q "Studio Karyna Santos"
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors "${PAGES_URL%/}/manifest.webmanifest" | grep -q "Studio Karyna Santos"
+

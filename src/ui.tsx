@@ -1,0 +1,38 @@
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
+import { media } from './data'
+
+export function Brand({full=false}:{full?:boolean}) {
+  return full ? <img className="brand-full" src={media('logo.webp')} alt="Karyna Santos Micropigmentadora"/> :
+  <span className="brand"><img src={media('monogram.webp')} width="44" height="40" alt=""/><span>Karyna Santos<small>STUDIO DE BELEZA</small></span></span>
+}
+
+export function Action({to,children,kind='ornate',className='',...props}:ButtonHTMLAttributes<HTMLButtonElement> & {to?:string;children:ReactNode;kind?:'ornate'|'outline'|'quiet'}) {
+  const cls = 'action action--' + kind + ' ' + className
+  const body = <><span className="action-decoration" aria-hidden="true"/><span className="action-label">{children}</span></>
+  return to ? <Link to={to} className={cls}>{body}</Link> : <button type="button" {...props} className={cls}>{body}</button>
+}
+
+export function TextLink({to,children}:{to:string;children:ReactNode}) {
+  return <Link className="text-link" to={to}>{children}<ChevronRight size={16} aria-hidden="true"/></Link>
+}
+
+export function Intro({label,title,description}:{label:string;title:string;description?:string}) {
+  return <header className="intro"><span className="eyebrow">{label}</span><h1>{title}</h1>{description&&<p>{description}</p>}</header>
+}
+
+export function Empty({title,children}:{title:string;children?:ReactNode}) {
+  return <div className="empty"><h3>{title}</h3>{children&&<div>{children}</div>}</div>
+}
+
+export function Dialog({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}) {
+  const ref=useRef<HTMLDialogElement>(null)
+  useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close()},[])
+  return <dialog ref={ref} aria-label={title} onCancel={event=>{event.preventDefault();onClose()}} onClick={event=>{if(event.target===event.currentTarget)onClose()}}>
+    <div className="dialog-content"><button className="dismiss" type="button" onClick={onClose} aria-label="Fechar">×</button><h2>{title}</h2>{children}</div>
+  </dialog>
+}
+
+export const Notice=({message,success=false}:{message:string;success?:boolean})=> message ? <p role={success?'status':'alert'} className={'notice '+(success?'success':'')}>{message}</p> : null
+
