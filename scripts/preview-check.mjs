@@ -9,6 +9,7 @@ try{
   await mkdir('test-results',{recursive:true})
   for(const viewport of [{width:1440,height:1000},{width:393,height:852}]){
     const page=await browser.newPage({viewport,deviceScaleFactor:1})
+    await page.addLocatorHandler(page.getByRole('button',{name:'Continuar no navegador',exact:true}),async button=>button.click())
     page.on('pageerror',error=>issues.push(error.message))
     page.on('response',event=>{if(event.status()>=400&&event.url().startsWith(base))issues.push(event.status()+' '+event.url())})
     await page.goto(base+'#/',{waitUntil:'networkidle'})

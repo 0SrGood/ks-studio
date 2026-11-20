@@ -6,6 +6,7 @@ import { Action, Brand } from './ui'
 import { useStudio } from './studio'
 import { AppHome } from './app-home'
 import { MoreSheet } from './more-sheet'
+import { InstallPrompt } from './install-prompt'
 import { CustomerEntry } from './customer-entry'
 import './app-shell.css'
 import './more-sheet.css'
@@ -77,6 +78,6 @@ export function App() {
       {tabs.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}
       <button type="button" className="more-trigger" aria-haspopup="dialog" aria-expanded={more} onClick={()=>setMore(true)}><Ellipsis size={21} aria-hidden="true"/><span>Mais</span></button>
     </nav>}
-    {more&&<MoreSheet close={()=>setMore(false)}/>}
+    {more&&<MoreSheet close={()=>setMore(false)}/>}<InstallPrompt/>
   </div>
 }

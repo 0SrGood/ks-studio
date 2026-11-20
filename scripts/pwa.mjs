@@ -40,7 +40,7 @@ self.addEventListener('push', event => {
   if (!event.data) return;
   let payload;
   try { payload = event.data.json(); } catch { return; }
-  event.waitUntil(self.registration.showNotification('Studio Karyna Santos', {
+  event.waitUntil(self.registration.showNotification('Ks Studio', {
     body: typeof payload.body === 'string' ? payload.body.slice(0, 180) : 'Você tem uma atualização no aplicativo.',
     icon: new URL('icons/icon-192.png', scope).href,
     data: { url: new URL('./#/perfil', scope).href },

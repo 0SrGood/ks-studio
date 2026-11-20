@@ -1,24 +1,21 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Clock3, Copy, FileCheck2, MapPin, Receipt, Smartphone } from 'lucide-react'
+import { CalendarDays, Clock3, Copy, FileCheck2, MapPin, Receipt } from 'lucide-react'
 import { db, database, invoke, rpc, useStudio } from './studio'
-import { addDays, appointmentStatus, currency, dayLabel, errorText, icon, isBookable, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
+import { addDays, appointmentStatus, currency, dayLabel, errorText, isBookable, localDay, maps, paymentStatus, time, type Booking, type PixSession, type Slot } from './data'
 import { Action, Dialog, DirectionButton, Empty, Intro, Notice, TextLink } from './ui'
 import { serviceArtwork } from './catalog'
 import './booking-steps.css'
 import {QuickService} from './quick-service'
 import {AppointmentCountdown} from './appointment-countdown'
 import {readContact,saveContact,readDeviceBookings,saveDeviceBookings} from './device-profile'
-import { requestInstallation } from './installation'
+
 import { Captcha, captchaSiteKey } from './captcha'
 
 import {ensureVisitor} from './visitor'
 
 const weekdays=['dom','seg','ter','qua','qui','sex','sáb']
-function installInvite() {
-  if(matchMedia('(display-mode: standalone)').matches) return false
-  return !localStorage.getItem('studio-install-invite')
-}
+
 
 export function calendarFile(booking:Booking, address:string) {
   const stamp=(iso:string)=>new Date(iso).toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'')
@@ -48,7 +45,7 @@ export default function BookingPage() {
   const [calendar,setCalendar]=useState(false)
   const [waitlist,setWaitlist]=useState(false)
   const [warning,setWarning]=useState(false)
-  const [invite,setInvite]=useState(false)
+
   const [error,setError]=useState('')
   const [feedback,setFeedback]=useState('')
   const [confirmed,setConfirmed]=useState<Booking|null>(null)
@@ -88,7 +85,7 @@ export default function BookingPage() {
       const owner=(await database().auth.getSession()).data.session?.user.id
       if(owner)saveDeviceBookings(owner,[result,...readDeviceBookings<Booking>(owner).filter(item=>item.id!==result.id)])
       if(details.method==='pix') {setParams({pix:result.id});setWarning(false)}
-      else {setConfirmed(result);if(installInvite())setInvite(true)}
+      else {setConfirmed(result)}
     }catch(error){setError(errorText(error))}
     finally{holding.current=false;setBusy(false)}
   }
@@ -111,11 +108,8 @@ export default function BookingPage() {
     }catch(error){setError(errorText(error))}finally{setBusy(false)}
   }
   function changeWeek(value:string){setWeek(value);setDay(value);setSlot('');requestId.current=crypto.randomUUID()}
-  const dismissInvite=()=>{localStorage.setItem('studio-install-invite','1');setInvite(false)}
-  const onReceipt=()=>{if(installInvite())setInvite(true)}
-  const qualifier={invite,dismissInvite}
-  if(bookingId) return <div className="wrap page narrow"><PixCheckout id={bookingId} onReceipt={onReceipt}/><InstallInvite {...qualifier}/></div>
-  if(confirmed) return <div className="wrap page narrow"><Confirmation booking={confirmed}/><InstallInvite {...qualifier}/></div>
+  if(bookingId) return <div className="wrap page narrow"><PixCheckout id={bookingId}/></div>
+  if(confirmed) return <div className="wrap page narrow"><Confirmation booking={confirmed}/></div>
   if(location.hash.startsWith('#/pagamentos')) return <div className="wrap page narrow"><Intro label="ÁREA DA CLIENTE" title="Pagamentos"/><BookingList onlyPayments/></div>
   const days=Array.from({length:7},(_,i)=>addDays(week,i))
   const daySlots=slots.filter(s=>s.day===day)
@@ -222,7 +216,7 @@ async function uploadReceipt(bookingId:string,file:File,progress:(n:number)=>voi
     xhr.send(body)
   })
 }
-function PixCheckout({id,onReceipt}:{id:string;onReceipt:()=>void}) {
+function PixCheckout({id}:{id:string}) {
   const [session,setPayment]=useState<PixSession|null>(null)
   const [booking,setBooking]=useState<Booking|null>(null)
   const [qr,setQr]=useState('')
@@ -268,7 +262,7 @@ function PixCheckout({id,onReceipt}:{id:string;onReceipt:()=>void}) {
     event.preventDefault()
     if(!file||progress!==null)return
     setProgress(0);setError('')
-    try{await uploadReceipt(id,file,setProgress);setFile(null);setStatus('Comprovante recebido. O Studio vai conferir o recebimento.');setManual(false);await reload();onReceipt()}
+    try{await uploadReceipt(id,file,setProgress);setFile(null);setStatus('Comprovante recebido. O Studio vai conferir o recebimento.');setManual(false);await reload()}
     catch(error){setError(errorText(error))}finally{setProgress(null)}
   }
   return <><Intro label="PAGAMENTO DO STUDIO" title="Pagamento Pix"/>
@@ -300,15 +294,6 @@ export function Confirmation({booking}:{booking:Booking}) {
     <p>{dayLabel(booking.starts_at)} · {time(booking.starts_at)} · {booking.duration} min</p><p>{settings.address}</p><p>{currency(booking.amount_cents)} · {booking.method==='pix'?'Pix':'Pagar no local'}</p><p>{paymentStatus[booking.payment_state]}</p>
     <div className="inline-actions"><Action to="/perfil">Ver meus agendamentos</Action><Action kind="outline" onClick={()=>calendarFile(booking,settings.address)}><CalendarDays size={17}/> Adicionar ao calendário</Action></div>
     <a href={maps} className="text-link" target="_blank" rel="noreferrer"><MapPin size={17}/> Abrir localização</a>{settings.contact_validated&&settings.whatsapp&&<a className="text-link" href={'https://wa.me/'+settings.whatsapp}>Falar com o Studio</a>}</section></>
-}
-function InstallInvite({invite,dismissInvite}:{invite:boolean;dismissInvite:()=>void}) {
-  const [instructions,setInstructions]=useState(false)
-  if(!invite)return null
-  return <Dialog title="O Studio agora pode estar sempre com você." onClose={dismissInvite}>
-    <img width="64" height="64" src={icon('icon-192.png')} alt=""/><p>Instale nosso aplicativo para acompanhar seus agendamentos, receber lembretes, conhecer novidades e aproveitar suas conquistas.</p>
-    {instructions&&<p>No iPhone, abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. Em outros navegadores, procure “Instalar aplicativo” no menu.</p>}
-    <div className="inline-actions"><Action onClick={()=>void requestInstallation().then(started=>{if(started)dismissInvite();else setInstructions(true)}).catch(()=>setInstructions(true))}><Smartphone size={17}/> Instalar aplicativo</Action><Action kind="quiet" onClick={dismissInvite}>Agora não</Action></div>
-  </Dialog>
 }
 export function BookingList({onlyPayments=false}:{onlyPayments?:boolean}) {
   const {session,settings}=useStudio()

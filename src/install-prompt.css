@@ -1,0 +1,16 @@
+.install-prompt{display:grid;gap:16px;justify-items:center;text-align:center}
+.install-app-icon{border-radius:19px;box-shadow:0 6px 20px #4b25321c}
+.install-prompt>p{margin:0}
+.install-prompt .action{width:100%;min-height:52px}
+.install-prompt .install-help{font-size:.8rem;line-height:1.5;color:#715d54}
+.install-prompt ol{text-align:left;margin:0;padding-left:24px;display:grid;gap:14px;line-height:1.5}
+
+.install-sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,520px);max-height:74dvh;border-radius:20px 20px 0 0;border-bottom:0;overflow-y:auto}
+.install-sheet[open]{animation:install-rise .28s cubic-bezier(.2,.75,.2,1) both}
+.install-sheet .dialog-content{padding:22px 24px calc(22px + env(safe-area-inset-bottom));animation:none}
+.install-sheet .dialog-content:before{content:'';display:block;width:36px;height:4px;background:#c1a99d;border-radius:4px;margin:-12px auto 18px}
+.install-sheet .dialog-content h2{font-family:inherit;font-size:1.35rem;line-height:1.3;font-weight:700;padding-right:24px;margin-bottom:18px}
+.install-sheet .install-prompt{gap:13px}
+.install-sheet .install-app-icon{width:64px;height:64px}
+@keyframes install-rise{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.install-sheet[open]{animation:none}}

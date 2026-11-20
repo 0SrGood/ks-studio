@@ -36,10 +36,10 @@ export function Empty({title,children}:{title:string;children?:ReactNode}) {
   return <div className="empty"><h3>{title}</h3>{children&&<div>{children}</div>}</div>
 }
 
-export function Dialog({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}) {
+export function Dialog({title,onClose,children,className}:{title:string;onClose:()=>void;children:ReactNode;className?:string}) {
   const ref=useRef<HTMLDialogElement>(null)
   useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close()},[])
-  return <dialog ref={ref} aria-label={title} onCancel={event=>{event.preventDefault();onClose()}} onClick={event=>{if(event.target===event.currentTarget)onClose()}}>
+  return <dialog ref={ref} className={className} aria-label={title} onCancel={event=>{event.preventDefault();onClose()}} onClick={event=>{if(event.target===event.currentTarget)onClose()}}>
     <div className="dialog-content"><button className="dismiss" type="button" onClick={onClose} aria-label="Fechar">×</button><h2>{title}</h2>{children}</div>
   </dialog>
 }
